@@ -185,7 +185,7 @@ func getSymbolFiles(path string) (files []string) {
 		return nil
 	})
 
-	return files
+	return triggerFiles
 }
 
 func Test() {
