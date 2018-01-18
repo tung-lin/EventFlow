@@ -1,0 +1,20 @@
+trigger: 
+  - 
+    mode: swagger_stats
+    setting: 
+      swagger_url: https://ptx.transportdata.tw/motc/api/main/docs/v2
+      api_ip: https://ptx.transportdata.tw
+      api_path: MOTC/
+      operations: 
+        - 
+          operationid: con1
+          condition: hasvalue
+          fields: ["routeId", "busId"]
+        - 
+          operationid: con2
+          condition: gap
+          fields: ["srcupdatetime", "sysupdatetime"]
+          threshold_type: minute 
+          threshold: 5
+  - 
+    mode: udp

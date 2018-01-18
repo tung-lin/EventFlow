@@ -1,1 +1,4 @@
 /docker/app
+**/*.so
+debug
+main
