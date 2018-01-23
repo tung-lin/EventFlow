@@ -22,7 +22,7 @@ func (factory ActionLimitationFactory) GetIdentifyName() string {
 	return "actionlimitation"
 }
 
-func (factory ActionLimitationFactory) CreatePolicy(config interface{}) pluginbase.IThrottlingPolicy {
+func (factory ActionLimitationFactory) CreatePolicy(config interface{}) pluginbase.IThrottlingPolicyPlugin {
 
 	var settingConfig SettingConfig
 	err := yamltool.UnmarshalToType(config, &settingConfig)
@@ -31,5 +31,5 @@ func (factory ActionLimitationFactory) CreatePolicy(config interface{}) pluginba
 		log.Print(err)
 	}
 
-	return ActionLimitationPlugin{Setting: settingConfig}
+	return &ActionLimitationPlugin{Setting: settingConfig}
 }

@@ -19,11 +19,11 @@ trigger:
   - 
     mode: http
     setting:
-      port: 8080
+      port: 8088
   -
     mode: http
     setting:
-      port: 8081
+      port: 8089
 
 action:
   - 
@@ -34,10 +34,11 @@ action:
       username: pplovable@gmail.com
       password: daulogr2
       from: pplovable@gmail.com
-      to: tl.yu@iisigroup.com
+      to: [tl.yu@iisigroup.com]
       subject: "test %{subject}"
       body: "test %{body}"
-    policy:
-        mode: alwaysfired
+    throttlingpolicy:
+        mode: actionlimitation
         setting:
-  
+          second: 5
+          limitation: 2

@@ -1,13 +1,12 @@
 package pluginbase
 
 type IThrottlingPolicyFactory interface {
-	IsDefaultFactory() bool
 	GetIdentifyName() string
-	CreatePolicy(config interface{}) IThrottlingPolicy
+	CreatePolicy(config interface{}) IThrottlingPolicyPlugin
 }
 
-type IThrottlingPolicy interface {
-	FireAction(throttlingIdFromTrigger string) bool
+type IThrottlingPolicyPlugin interface {
+	Throttling(throttlingIdFromTrigger string) bool
 }
 
 type Policy struct {

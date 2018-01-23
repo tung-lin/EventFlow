@@ -7,8 +7,9 @@ import (
 )
 
 type SettingConfig struct {
-	Second    int `yaml:second`
-	Threshold int `yaml:threshold`
+	Second     int `yaml:second`
+	Threshold  int `yaml:threshold`
+	Limitation int `yaml:limitation`
 }
 
 type TriggerThresholdFactory struct {
@@ -22,7 +23,7 @@ func (factory TriggerThresholdFactory) GetIdentifyName() string {
 	return "triggerthreshold"
 }
 
-func (factory TriggerThresholdFactory) CreatePolicy(config interface{}) pluginbase.IThrottlingPolicy {
+func (factory TriggerThresholdFactory) CreatePolicy(config interface{}) pluginbase.IThrottlingPolicyPlugin {
 
 	var settingConfig SettingConfig
 	err := yamltool.UnmarshalToType(config, &settingConfig)
@@ -31,5 +32,5 @@ func (factory TriggerThresholdFactory) CreatePolicy(config interface{}) pluginba
 		log.Print(err)
 	}
 
-	return TriggerThresholdPlugin{Setting: settingConfig}
+	return &TriggerThresholdPlugin{Setting: settingConfig}
 }

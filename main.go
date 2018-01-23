@@ -21,18 +21,21 @@ type EventFlow struct {
 	} `yaml:trigger`
 
 	Action []struct {
-		Mode   string `yaml:mode`
-		Policy struct {
+		Mode             string      `yaml:mode`
+		Setting          interface{} `yaml:setting`
+		ThrottlingPolicy struct {
 			Mode    string      `yaml:mode`
 			Setting interface{} `yaml:setting`
-		} `yaml:policy`
-		Setting interface{} `yaml:setting`
+		} `yaml:throttlingpolicy`
 	} `yaml:action`
 }
 
 var loader IPluginLoader
 var triggerFactoryMap map[string]pluginbase.ITriggerFactory
 var actionFactoryMap map[string]pluginbase.IActionFactory
+var pipelineMap map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin
+var actionPolicyMap map[pluginbase.IActionPlugin]pluginbase.IThrottlingPolicyPlugin
+var ch chan bool
 
 func main() {
 
@@ -40,7 +43,13 @@ func main() {
 	//loader = PluginSharedObjectLoader{}
 
 	triggerFactoryMap, actionFactoryMap = loader.Load()
+	pipelineMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin)
+	actionPolicyMap = make(map[pluginbase.IActionPlugin]pluginbase.IThrottlingPolicyPlugin)
+
 	LoadConfig()
+
+	<-ch
+	log.Print("exist")
 }
 
 func LoadConfig() {
@@ -53,8 +62,6 @@ func LoadConfig() {
 		log.Print(err)
 		return
 	}
-
-	var allTriggerPluginList []*pluginbase.ITriggerPlugin
 
 	for _, file := range files {
 		pipelineFile, err := ioutil.ReadFile(configPath + file.Name())
@@ -72,6 +79,10 @@ func LoadConfig() {
 			continue
 		}
 
+		if len(config.Trigger) == 0 {
+			continue
+		}
+
 		var triggerPluginList []*pluginbase.ITriggerPlugin
 
 		for _, trigger := range config.Trigger {
@@ -81,10 +92,14 @@ func LoadConfig() {
 				triggerPlugin := triggerFactory.CreateTrigger(trigger.Setting)
 
 				if triggerPlugin != nil {
+					triggerPlugin.PolicyHandleFunc(policyHandleFunc)
 					triggerPluginList = append(triggerPluginList, &triggerPlugin)
-					allTriggerPluginList = append(allTriggerPluginList, &triggerPlugin)
 				}
 			}
+		}
+
+		if len(triggerPluginList) == 0 {
+			continue
 		}
 
 		for _, action := range config.Action {
@@ -92,22 +107,42 @@ func LoadConfig() {
 
 			if existed {
 
-				if action.Policy != nil {
-					policy := throttlingtool.CreatePolicy(action.Policy.Mode, action.Policy.Setting)
-				}
+				for _, triggerPlugin := range triggerPluginList {
 
-				actionPlugin := actionFactory.CreateAction(action.Setting)
+					actionPlugin := actionFactory.CreateAction(action.Setting)
 
-				if actionPlugin != nil {
-					for _, triggerPlugin := range triggerPluginList {
-						(*triggerPlugin).AddAction(&actionPlugin)
+					if actionPlugin != nil {
+						pipelineMap[*triggerPlugin] = append(pipelineMap[*triggerPlugin], actionPlugin)
+
+						if action.ThrottlingPolicy.Mode != "" {
+							policyPlugin := throttlingtool.CreatePolicy(action.ThrottlingPolicy.Mode, action.ThrottlingPolicy.Setting)
+							actionPolicyMap[actionPlugin] = policyPlugin
+							//log.Printf("%s-%s", &actionPlugin, &policyPlugin)
+						}
 					}
 				}
 			}
 		}
+	}
 
-		for _, triggerPlugin := range triggerPluginList {
-			(*triggerPlugin).Start()
+	for triggerPlugin := range pipelineMap {
+		go triggerPlugin.Start()
+	}
+}
+
+func policyHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, throttlingId string, messageFromTrigger *string) {
+	for _, actionPlugin := range pipelineMap[*triggerPlugin] {
+
+		canFireAction := true
+
+		if policyPlugin, existed := actionPolicyMap[actionPlugin]; existed {
+			//log.Printf("%s-%s", &actionPlugin, &policyPlugin)
+			canFireAction = policyPlugin.Throttling(throttlingId)
+		}
+
+		if canFireAction {
+			log.Print("action fired")
+			actionPlugin.FireAction(throttlingId, messageFromTrigger)
 		}
 	}
 }

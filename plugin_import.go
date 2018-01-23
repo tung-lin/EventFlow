@@ -5,7 +5,6 @@ import (
 	"EventFlow/common/tool/throttlingtool"
 	"EventFlow/plugin/action/email"
 	"EventFlow/plugin/policy/actionlimitation"
-	"EventFlow/plugin/policy/alwaysfired"
 	"EventFlow/plugin/policy/triggerthreshold"
 	"EventFlow/plugin/trigger/http"
 	"EventFlow/plugin/trigger/swaggerstats"
@@ -30,14 +29,13 @@ func (loader PluginImportLoader) Load() (triggerFactories map[string]pluginbase.
 	var actionFactoryMap = make(map[string]pluginbase.IActionFactory)
 	actions := []pluginbase.IActionFactory{}
 
-	actions = append(actions, email.EmailFactory)
+	actions = append(actions, email.EmailFactory{})
 
 	for _, action := range actions {
 		actionFactoryMap[action.GetIdentifyName()] = action
 	}
 
 	//create policy factories
-	throttlingtool.AddPolicyFactory(alwaysfired.AlwaysFiredFactory{})
 	throttlingtool.AddPolicyFactory(triggerthreshold.TriggerThresholdFactory{})
 	throttlingtool.AddPolicyFactory(actionlimitation.ActionLimitationFactory{})
 

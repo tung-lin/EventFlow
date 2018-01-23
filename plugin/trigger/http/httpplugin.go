@@ -15,16 +15,12 @@ import (
 )
 
 type HttpPlugin struct {
+	currentServer *nethttp.Server
+	pluginbase.PolicyHandler
 	Setting SettingConfig
 }
 
-var actionList []*pluginbase.IActionPlugin
-var currentServer *nethttp.Server
 var allowHttpMethods []string
-
-func (trigger *HttpPlugin) AddAction(actionPlugin *pluginbase.IActionPlugin) {
-	actionList = append(actionList, actionPlugin)
-}
 
 func (trigger *HttpPlugin) Start() {
 
@@ -38,23 +34,30 @@ func (trigger *HttpPlugin) Start() {
 	router.HandleFunc("/", handler).Methods("DELETE")
 	router.HandleFunc("/", handler).Methods("HEAD")
 
-	currentServer = &nethttp.Server{
-		Addr:    fmt.Sprintf(":%d", trigger.Setting.Port),
+	addr := fmt.Sprintf(":%d", trigger.Setting.Port)
+
+	trigger.currentServer = &nethttp.Server{
+		Addr:    addr,
 		Handler: router,
 	}
 
-	currentServer.RegisterOnShutdown(onServerShutdown)
-	currentServer.ListenAndServe()
+	trigger.currentServer.RegisterOnShutdown(trigger.onServerShutdown)
+
+	log.Printf("[http] listening at %s", addr)
+
+	if err := trigger.currentServer.ListenAndServe(); err != nil {
+		log.Printf("[http] listening at %s failed\r\n%s", addr, err)
+	}
 }
 
 func (trigger *HttpPlugin) Stop() {
 
-	if currentServer != nil {
+	if trigger.currentServer != nil {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		if err := currentServer.Shutdown(ctx); err != nil {
+		if err := trigger.currentServer.Shutdown(ctx); err != nil {
 			log.Printf("Server shutdown failed:%s", err)
 		}
 	}
@@ -74,9 +77,10 @@ func (trigger *HttpPlugin) handleRequestFunc(w nethttp.ResponseWriter, r *nethtt
 			return
 		}
 
-		for _, action := range actionList {
-			(*action).FireAction(trigger, string(body))
-		}
+		bodyContent := string(body)
+
+		var triggerPlugin pluginbase.ITriggerPlugin = trigger
+		trigger.FireAction(&triggerPlugin, &bodyContent)
 
 	} else {
 		nethttp.Error(w, fmt.Sprintf("Method '%s' not allowed", r.Method), nethttp.StatusMethodNotAllowed)
@@ -84,6 +88,6 @@ func (trigger *HttpPlugin) handleRequestFunc(w nethttp.ResponseWriter, r *nethtt
 
 }
 
-func onServerShutdown() {
-	log.Printf("Server '%s' shutdown...", currentServer.Addr)
+func (trigger *HttpPlugin) onServerShutdown() {
+	log.Printf("Server '%s' shutdown...", trigger.currentServer.Addr)
 }
