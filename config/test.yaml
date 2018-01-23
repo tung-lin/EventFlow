@@ -1,6 +1,6 @@
 trigger: 
   - 
-    mode: swagger_stats
+    mode: swaggerstats
     setting: 
       swagger_url: https://ptx.transportdata.tw/motc/api/main/docs/v2
       api_ip: https://ptx.transportdata.tw
@@ -14,7 +14,30 @@ trigger:
           operationid: con2
           condition: gap
           fields: ["srcupdatetime", "sysupdatetime"]
-          threshold_type: minute 
+          thresholdtype: minute 
           threshold: 5
   - 
-    mode: udp
+    mode: http
+    setting:
+      port: 8080
+  -
+    mode: http
+    setting:
+      port: 8081
+
+action:
+  - 
+    mode: email
+    setting:
+      address: smtp.gmail.com
+      port: 587
+      username: pplovable@gmail.com
+      password: daulogr2
+      from: pplovable@gmail.com
+      to: tl.yu@iisigroup.com
+      subject: "test %{subject}"
+      body: "test %{body}"
+    policy:
+        mode: alwaysfired
+        setting:
+  
