@@ -15,39 +15,45 @@ type IPluginLoader interface {
 }
 
 type EventFlow struct {
-	Trigger []struct {
+	Trigger struct {
 		Mode    string      `yaml:mode`
 		Setting interface{} `yaml:setting`
 	} `yaml:trigger`
 
 	Action []struct {
-		Mode             string      `yaml:mode`
-		Setting          interface{} `yaml:setting`
-		ThrottlingPolicy struct {
-			Mode    string      `yaml:mode`
-			Setting interface{} `yaml:setting`
-		} `yaml:throttlingpolicy`
+		Mode             string           `yaml:mode`
+		Setting          interface{}      `yaml:setting`
+		ThrottlingPolicy ThrottlingPolicy `yaml:throttlingpolicy`
 	} `yaml:action`
 }
 
+type ThrottlingPolicy struct {
+	Mode    string      `yaml:mode`
+	Setting interface{} `yaml:setting`
+}
+
 var loader IPluginLoader
+var ch chan bool
+
 var triggerFactoryMap map[string]pluginbase.ITriggerFactory
 var actionFactoryMap map[string]pluginbase.IActionFactory
 var pipelineMap map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin
-var actionPolicyMap map[pluginbase.IActionPlugin]pluginbase.IThrottlingPolicyPlugin
-var ch chan bool
+var actionPolicyMap map[pluginbase.IActionPlugin]ThrottlingPolicy
+var policyInstanceMap map[string]pluginbase.IThrottlingPolicyPlugin
 
-func main() {
-
+func init() {
 	loader = PluginImportLoader{}
 	//loader = PluginSharedObjectLoader{}
 
 	triggerFactoryMap, actionFactoryMap = loader.Load()
 	pipelineMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin)
-	actionPolicyMap = make(map[pluginbase.IActionPlugin]pluginbase.IThrottlingPolicyPlugin)
+	actionPolicyMap = make(map[pluginbase.IActionPlugin]ThrottlingPolicy)
+	policyInstanceMap = make(map[string]pluginbase.IThrottlingPolicyPlugin)
 
 	LoadConfig()
+}
 
+func main() {
 	<-ch
 	log.Print("exist")
 }
@@ -79,47 +85,36 @@ func LoadConfig() {
 			continue
 		}
 
-		if len(config.Trigger) == 0 {
+		if config.Trigger.Mode == "" {
 			continue
 		}
 
-		var triggerPluginList []*pluginbase.ITriggerPlugin
+		triggerFactory, existed := triggerFactoryMap[config.Trigger.Mode]
 
-		for _, trigger := range config.Trigger {
-			triggerFactory, existed := triggerFactoryMap[trigger.Mode]
-
-			if existed {
-				triggerPlugin := triggerFactory.CreateTrigger(trigger.Setting)
-
-				if triggerPlugin != nil {
-					triggerPlugin.PolicyHandleFunc(policyHandleFunc)
-					triggerPluginList = append(triggerPluginList, &triggerPlugin)
-				}
-			}
+		if !existed {
+			continue
 		}
 
-		if len(triggerPluginList) == 0 {
-			continue
+		triggerPlugin := triggerFactory.CreateTrigger(config.Trigger.Setting)
+
+		if triggerPlugin != nil {
+			triggerPlugin.PolicyHandleFunc(policyHandleFunc)
 		}
 
 		for _, action := range config.Action {
 			actionFactory, existed := actionFactoryMap[action.Mode]
 
-			if existed {
+			if !existed {
+				continue
+			}
 
-				for _, triggerPlugin := range triggerPluginList {
+			actionPlugin := actionFactory.CreateAction(action.Setting)
 
-					actionPlugin := actionFactory.CreateAction(action.Setting)
+			if actionPlugin != nil {
+				pipelineMap[triggerPlugin] = append(pipelineMap[triggerPlugin], actionPlugin)
 
-					if actionPlugin != nil {
-						pipelineMap[*triggerPlugin] = append(pipelineMap[*triggerPlugin], actionPlugin)
-
-						if action.ThrottlingPolicy.Mode != "" {
-							policyPlugin := throttlingtool.CreatePolicy(action.ThrottlingPolicy.Mode, action.ThrottlingPolicy.Setting)
-							actionPolicyMap[actionPlugin] = policyPlugin
-							//log.Printf("%s-%s", &actionPlugin, &policyPlugin)
-						}
-					}
+				if action.ThrottlingPolicy.Mode != "" {
+					actionPolicyMap[actionPlugin] = action.ThrottlingPolicy
 				}
 			}
 		}
@@ -130,19 +125,29 @@ func LoadConfig() {
 	}
 }
 
-func policyHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, throttlingId string, messageFromTrigger *string) {
+func policyHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, throttlingID string, messageFromTrigger *string) {
 	for _, actionPlugin := range pipelineMap[*triggerPlugin] {
 
 		canFireAction := true
+		policyInstance, existed := policyInstanceMap[throttlingID]
 
-		if policyPlugin, existed := actionPolicyMap[actionPlugin]; existed {
-			//log.Printf("%s-%s", &actionPlugin, &policyPlugin)
-			canFireAction = policyPlugin.Throttling(throttlingId)
+		if !existed {
+			if policyConfig, existed := actionPolicyMap[actionPlugin]; existed {
+				policyInstance = throttlingtool.CreatePolicy(policyConfig.Mode, policyConfig.Setting)
+
+				if policyInstance != nil {
+					policyInstanceMap[throttlingID] = policyInstance
+				}
+			}
+		}
+
+		if policyInstance != nil {
+			canFireAction = policyInstance.Throttling(throttlingID)
 		}
 
 		if canFireAction {
 			log.Print("action fired")
-			actionPlugin.FireAction(throttlingId, messageFromTrigger)
+			actionPlugin.FireAction(throttlingID, messageFromTrigger)
 		}
 	}
 }
