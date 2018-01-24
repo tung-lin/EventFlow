@@ -4,6 +4,7 @@ import (
 	"EventFlow/common/interface/pluginbase"
 	"EventFlow/common/tool/yamltool"
 	"log"
+	"sync"
 )
 
 type SettingConfig struct {
@@ -31,5 +32,5 @@ func (factory ActionLimitationFactory) CreatePolicy(config interface{}) pluginba
 		log.Print(err)
 	}
 
-	return &ActionLimitationPlugin{Setting: settingConfig}
+	return &ActionLimitationPlugin{Setting: settingConfig, mutex: &sync.Mutex{}}
 }

@@ -4,6 +4,7 @@ import (
 	"EventFlow/common/interface/pluginbase"
 	"EventFlow/common/tool/yamltool"
 	"log"
+	"sync"
 )
 
 type SettingConfig struct {
@@ -32,5 +33,5 @@ func (factory TriggerThresholdFactory) CreatePolicy(config interface{}) pluginba
 		log.Print(err)
 	}
 
-	return &TriggerThresholdPlugin{Setting: settingConfig}
+	return &TriggerThresholdPlugin{Setting: settingConfig, mutex: &sync.Mutex{}}
 }

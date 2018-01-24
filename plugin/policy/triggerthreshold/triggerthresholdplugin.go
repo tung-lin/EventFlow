@@ -1,12 +1,14 @@
 package triggerthreshold
 
 import (
+	"sync"
 	"sync/atomic"
 	"time"
 )
 
 type TriggerThresholdPlugin struct {
-	tick                <-chan time.Time
+	timer               *time.Timer
+	mutex               *sync.Mutex
 	currentTriggerCount int32
 	currentExecuteCount int32
 	Setting             SettingConfig
@@ -14,20 +16,20 @@ type TriggerThresholdPlugin struct {
 
 func (plugin *TriggerThresholdPlugin) Throttling(throttlingIdFromTrigger string) bool {
 
-	if plugin.tick == nil {
+	plugin.mutex.Lock()
 
-		plugin.tick = time.Tick(time.Second * time.Duration(plugin.Setting.Second))
-
-		go func() {
-			for {
-				select {
-				case <-plugin.tick:
-					atomic.StoreInt32(&plugin.currentExecuteCount, 0)
-					atomic.StoreInt32(&plugin.currentTriggerCount, 0)
-				}
-			}
-		}()
+	if plugin.timer == nil {
+		plugin.timer = time.AfterFunc(time.Second*time.Duration(plugin.Setting.Second), func() {
+			atomic.StoreInt32(&plugin.currentExecuteCount, 0)
+			atomic.StoreInt32(&plugin.currentTriggerCount, 0)
+		})
+	} else {
+		if atomic.LoadInt32(&plugin.currentExecuteCount) == 0 && atomic.LoadInt32(&plugin.currentTriggerCount) == 0 {
+			plugin.timer.Reset(time.Second * time.Duration(plugin.Setting.Second))
+		}
 	}
+
+	plugin.mutex.Unlock()
 
 	atomic.AddInt32(&plugin.currentTriggerCount, 1)
 	canExecuteAction := atomic.LoadInt32(&plugin.currentTriggerCount) >= int32(plugin.Setting.Threshold) && atomic.LoadInt32(&plugin.currentExecuteCount) <= int32(plugin.Setting.Limitation)
