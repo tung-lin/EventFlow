@@ -37,16 +37,18 @@ func (trigger *HttpPlugin) Start() {
 	addr := fmt.Sprintf(":%d", trigger.Setting.Port)
 
 	trigger.currentServer = &nethttp.Server{
-		Addr:    addr,
-		Handler: router,
+		Addr:         addr,
+		Handler:      router,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	trigger.currentServer.RegisterOnShutdown(trigger.onServerShutdown)
 
-	log.Printf("[http] listening at %s", addr)
+	log.Printf("[trigger][http] Listening at %s", addr)
 
 	if err := trigger.currentServer.ListenAndServe(); err != nil {
-		log.Printf("[http] listening at %s failed\r\n%s", addr, err)
+		log.Printf("[trigger][http] Listening at %s failed\r\n%s", addr, err)
 	}
 }
 
@@ -72,7 +74,7 @@ func (trigger *HttpPlugin) handleRequestFunc(w nethttp.ResponseWriter, r *nethtt
 		body, err := ioutil.ReadAll(r.Body)
 
 		if err != nil {
-			log.Printf("Error reading body: %v", err)
+			log.Printf("[trigger][http] Read http response body failed : %v", err)
 			nethttp.Error(w, "can't read body", nethttp.StatusBadRequest)
 			return
 		}
@@ -83,11 +85,11 @@ func (trigger *HttpPlugin) handleRequestFunc(w nethttp.ResponseWriter, r *nethtt
 		trigger.FireAction(&triggerPlugin, &bodyContent)
 
 	} else {
-		nethttp.Error(w, fmt.Sprintf("Method '%s' not allowed", r.Method), nethttp.StatusMethodNotAllowed)
+		nethttp.Error(w, fmt.Sprintf("[trigger][http] Method '%s' not allowed", r.Method), nethttp.StatusMethodNotAllowed)
 	}
 
 }
 
 func (trigger *HttpPlugin) onServerShutdown() {
-	log.Printf("Server '%s' shutdown...", trigger.currentServer.Addr)
+	log.Printf("[trigger][http] Server '%s' shutdown...", trigger.currentServer.Addr)
 }
