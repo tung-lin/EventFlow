@@ -8,7 +8,7 @@ filter:
     mode: json
     setting:
       addmetadata: 
-        id: "[key]"
+        key: "[key]"
         test: "[level1][level2][test2]"
   -
     mode: throttle
@@ -16,7 +16,7 @@ filter:
         triggercount: 2
         actioncount: 2
         periodsecond: 10
-        key: "%{id}"
+        key: "%{key}"
 
 action:
   - 

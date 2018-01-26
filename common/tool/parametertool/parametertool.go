@@ -1,15 +1,24 @@
 package parametertool
 
 import (
+	"regexp"
 	"strings"
 )
 
-var replacer *strings.Replacer
+var regex = regexp.MustCompile(`{[^}]*}`)
+var replacer = strings.NewReplacer("{", "", "}", "")
 
-func init() {
-	replacer = strings.NewReplacer("%", "", "{", "", "}", "")
-}
+func ReplaceWithParameter(target *string, parameters *map[string]interface{}) {
 
-func GetParameterKey(parameter string) (key string) {
-	return replacer.Replace(parameter)
+	matches := regex.FindAllString(*target, -1)
+
+	for _, matchItem := range matches {
+
+		parmKey := replacer.Replace(matchItem)
+		parmValue := (*parameters)[parmKey]
+
+		if newValue, ok := parmValue.(string); ok {
+			*target = strings.Replace(*target, "%"+matchItem, newValue, -1)
+		}
+	}
 }
