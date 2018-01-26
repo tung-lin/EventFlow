@@ -3,6 +3,21 @@ trigger:
   setting:
     port: 8088
 
+filter:
+  -
+    mode: json
+    setting:
+      addmetadata: 
+        id: "[key]"
+        test: "[level1][level2][test2]"
+  -
+    mode: throttle
+    setting:
+        triggercount: 2
+        actioncount: 2
+        periodsecond: 10
+        key: "%{id}"
+
 action:
   - 
     mode: email
@@ -15,8 +30,3 @@ action:
       to: [tl.yu@iisigroup.com]
       subject: "test %{subject}"
       body: "test %{body}"
-    throttlingpolicy:
-        mode: actionlimitation
-        setting:
-          second: 5
-          limitation: 2
