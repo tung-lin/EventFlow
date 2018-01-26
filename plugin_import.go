@@ -2,10 +2,9 @@ package main
 
 import (
 	"EventFlow/common/interface/pluginbase"
-	"EventFlow/common/tool/throttlingtool"
 	"EventFlow/plugin/action/email"
-	"EventFlow/plugin/policy/actionlimitation"
-	"EventFlow/plugin/policy/triggerthreshold"
+	"EventFlow/plugin/filter/json"
+	"EventFlow/plugin/filter/throttle"
 	"EventFlow/plugin/trigger/http"
 	"EventFlow/plugin/trigger/swaggerstats"
 )
@@ -13,7 +12,7 @@ import (
 type PluginImportLoader struct {
 }
 
-func (loader PluginImportLoader) Load() (triggerFactories map[string]pluginbase.ITriggerFactory, actionFactories map[string]pluginbase.IActionFactory) {
+func (loader PluginImportLoader) Load() (triggerFactories map[string]pluginbase.ITriggerFactory, filterFactories map[string]pluginbase.IFilterFactory, actionFactories map[string]pluginbase.IActionFactory) {
 
 	//create trigger factories
 	var triggerFactoryMap = make(map[string]pluginbase.ITriggerFactory)
@@ -23,6 +22,16 @@ func (loader PluginImportLoader) Load() (triggerFactories map[string]pluginbase.
 
 	for _, trigger := range triggers {
 		triggerFactoryMap[trigger.GetIdentifyName()] = trigger
+	}
+
+	//create filter factories
+	var filterFactoryMap = make(map[string]pluginbase.IFilterFactory)
+	filters := []pluginbase.IFilterFactory{}
+
+	filters = append(filters, json.JSONFactory{}, throttle.ThrottleFactory{})
+
+	for _, filter := range filters {
+		filterFactoryMap[filter.GetIdentifyName()] = filter
 	}
 
 	//create action factories
@@ -35,9 +44,5 @@ func (loader PluginImportLoader) Load() (triggerFactories map[string]pluginbase.
 		actionFactoryMap[action.GetIdentifyName()] = action
 	}
 
-	//create policy factories
-	throttlingtool.AddPolicyFactory(triggerthreshold.TriggerThresholdFactory{})
-	throttlingtool.AddPolicyFactory(actionlimitation.ActionLimitationFactory{})
-
-	return triggerFactoryMap, actionFactoryMap
+	return triggerFactoryMap, filterFactoryMap, actionFactoryMap
 }

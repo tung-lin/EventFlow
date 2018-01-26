@@ -21,3 +21,14 @@ func InArray(val interface{}, array interface{}) (exists bool, index int) {
 
 	return
 }
+
+func RemoveItem(items []string, removeTarget string) (results []string) {
+
+	for _, item := range items {
+		if item != removeTarget {
+			results = append(results, item)
+		}
+	}
+
+	return results
+}

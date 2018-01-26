@@ -2,7 +2,6 @@ package main
 
 import (
 	"EventFlow/common/interface/pluginbase"
-	"EventFlow/common/tool/throttlingtool"
 	"io/ioutil"
 	"log"
 	"os"
@@ -11,7 +10,7 @@ import (
 )
 
 type IPluginLoader interface {
-	Load() (triggerFactories map[string]pluginbase.ITriggerFactory, actionFactories map[string]pluginbase.IActionFactory)
+	Load() (triggerFactories map[string]pluginbase.ITriggerFactory, filterFactories map[string]pluginbase.IFilterFactory, actionFactories map[string]pluginbase.IActionFactory)
 }
 
 type EventFlow struct {
@@ -20,10 +19,14 @@ type EventFlow struct {
 		Setting interface{} `yaml:setting`
 	} `yaml:trigger`
 
+	Filter []struct {
+		Mode    string      `yaml:mode`
+		Setting interface{} `yaml:setting`
+	} `yaml:filter`
+
 	Action []struct {
-		Mode             string           `yaml:mode`
-		Setting          interface{}      `yaml:setting`
-		ThrottlingPolicy ThrottlingPolicy `yaml:throttlingpolicy`
+		Mode    string      `yaml:mode`
+		Setting interface{} `yaml:setting`
 	} `yaml:action`
 }
 
@@ -37,18 +40,19 @@ var ch chan bool
 
 var triggerFactoryMap map[string]pluginbase.ITriggerFactory
 var actionFactoryMap map[string]pluginbase.IActionFactory
-var pipelineMap map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin
-var actionPolicyMap map[pluginbase.IActionPlugin]ThrottlingPolicy
-var policyInstanceMap map[string]pluginbase.IThrottlingPolicyPlugin
+var filterFactoryMap map[string]pluginbase.IFilterFactory
+
+var pipelineFilterMap map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin
+var pipelineActionMap map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin
 
 func init() {
 	loader = PluginImportLoader{}
 	//loader = PluginSharedObjectLoader{}
 
-	triggerFactoryMap, actionFactoryMap = loader.Load()
-	pipelineMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin)
-	actionPolicyMap = make(map[pluginbase.IActionPlugin]ThrottlingPolicy)
-	policyInstanceMap = make(map[string]pluginbase.IThrottlingPolicyPlugin)
+	triggerFactoryMap, filterFactoryMap, actionFactoryMap = loader.Load()
+
+	pipelineFilterMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin)
+	pipelineActionMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin)
 
 	LoadConfig()
 }
@@ -97,8 +101,26 @@ func LoadConfig() {
 
 		triggerPlugin := triggerFactory.CreateTrigger(config.Trigger.Setting)
 
-		if triggerPlugin != nil {
-			triggerPlugin.PolicyHandleFunc(policyHandleFunc)
+		if triggerPlugin == nil {
+			continue
+		}
+
+		triggerPlugin.PolicyHandleFunc(policyHandleFunc)
+
+		for _, filter := range config.Filter {
+			filterFactory, existed := filterFactoryMap[filter.Mode]
+
+			if !existed {
+				continue
+			}
+
+			filterPlugin := filterFactory.CreateFilter(filter.Setting)
+
+			if filterPlugin == nil {
+				continue
+			}
+
+			pipelineFilterMap[triggerPlugin] = append(pipelineFilterMap[triggerPlugin], filterPlugin)
 		}
 
 		for _, action := range config.Action {
@@ -110,44 +132,34 @@ func LoadConfig() {
 
 			actionPlugin := actionFactory.CreateAction(action.Setting)
 
-			if actionPlugin != nil {
-				pipelineMap[triggerPlugin] = append(pipelineMap[triggerPlugin], actionPlugin)
-
-				if action.ThrottlingPolicy.Mode != "" {
-					actionPolicyMap[actionPlugin] = action.ThrottlingPolicy
-				}
+			if actionPlugin == nil {
+				continue
 			}
+
+			pipelineActionMap[triggerPlugin] = append(pipelineActionMap[triggerPlugin], actionPlugin)
 		}
 	}
 
-	for triggerPlugin := range pipelineMap {
+	for triggerPlugin := range pipelineActionMap {
 		go triggerPlugin.Start()
 	}
 }
 
 func policyHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, throttlingID string, messageFromTrigger *string) {
-	for _, actionPlugin := range pipelineMap[*triggerPlugin] {
 
-		canFireAction := true
-		policyInstance, existed := policyInstanceMap[throttlingID]
+	parameters := make(map[string]interface{})
 
-		if !existed {
-			if policyConfig, existed := actionPolicyMap[actionPlugin]; existed {
-				policyInstance = throttlingtool.CreatePolicy(policyConfig.Mode, policyConfig.Setting)
-
-				if policyInstance != nil {
-					policyInstanceMap[throttlingID] = policyInstance
-				}
+	go func() {
+		for _, filterPlugin := range pipelineFilterMap[*triggerPlugin] {
+			if doNextPipeline := filterPlugin.DoFilter(messageFromTrigger, &parameters); !doNextPipeline {
+				return
 			}
 		}
 
-		if policyInstance != nil {
-			canFireAction = policyInstance.Throttling(throttlingID)
-		}
+		log.Printf("fire action...")
 
-		if canFireAction {
-			log.Print("action fired")
-			actionPlugin.FireAction(throttlingID, messageFromTrigger)
+		for _, actionPlugin := range pipelineActionMap[*triggerPlugin] {
+			actionPlugin.FireAction(messageFromTrigger, &parameters)
 		}
-	}
+	}()
 }

@@ -1,15 +1,14 @@
-package yamltool
+package jsontool
 
 import (
+	"encoding/json"
 	"log"
-
-	"gopkg.in/yaml.v2"
 )
 
 func UnmarshalToType(in interface{}, out interface{}) (err error) {
 
 	bytes := structToByteArray(in)
-	err = yaml.Unmarshal(bytes, out)
+	err = json.Unmarshal(bytes, out)
 
 	return err
 }
@@ -20,10 +19,10 @@ func structToByteArray(setting interface{}) (bytes []byte) {
 		return nil
 	}
 
-	bytes, err := yaml.Marshal(setting)
+	bytes, err := json.Marshal(setting)
 
 	if err != nil {
-		log.Printf("Marshal yaml config to byte array failed: %v", err)
+		log.Printf("Marshal json config to byte array failed: %v", err)
 		return nil
 	}
 

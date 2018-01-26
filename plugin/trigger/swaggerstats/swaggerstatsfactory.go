@@ -8,11 +8,12 @@ import (
 
 //yaml config
 type SettingConfig struct {
-	Swagger_url string `yaml:swagger_url`
-	API_IP      string `yaml:api_ip`
-	API_Path    string `yaml:api_path`
-	Operations  []struct {
-		OperationId   string   `yaml:operaionid`
+	SwaggerURL     string   `yaml:swagger_url`
+	APIIP          string   `yaml:api_ip`
+	APIPath        string   `yaml:api_path`
+	SkipOperations []string `yaml:skip_operations`
+	Operations     []struct {
+		OperationID   string   `yaml:operaionid`
 		Condition     string   `yaml:condition`
 		Fields        []string `yaml:fields`
 		ThresholdType string   `yaml:thresholdtype`

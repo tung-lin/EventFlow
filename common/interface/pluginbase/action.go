@@ -6,5 +6,5 @@ type IActionFactory interface {
 }
 
 type IActionPlugin interface {
-	FireAction(throttlingIdFromTrigger string, messageFromTrigger *string)
+	FireAction(messageFromTrigger *string, parameters *map[string]interface{})
 }

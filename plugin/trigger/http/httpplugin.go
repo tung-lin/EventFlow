@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 	"time"
 
 	nethttp "net/http"
@@ -28,11 +29,8 @@ func (trigger *HttpPlugin) Start() {
 	handler := trigger.handleRequestFunc
 
 	router := mux.NewRouter()
-	router.HandleFunc("/", handler).Methods("POST")
-	router.HandleFunc("/", handler).Methods("GET")
-	router.HandleFunc("/", handler).Methods("PUT")
-	router.HandleFunc("/", handler).Methods("DELETE")
-	router.HandleFunc("/", handler).Methods("HEAD")
+	router.HandleFunc("/", handler)
+	router.HandleFunc("/trigger/{triggerid:.*}", handler)
 
 	addr := fmt.Sprintf(":%d", trigger.Setting.Port)
 
@@ -69,25 +67,46 @@ func (trigger *HttpPlugin) handleRequestFunc(w nethttp.ResponseWriter, r *nethtt
 
 	log.Printf("http %s %s%s", r.Method, r.Host, r.URL)
 
-	if existed, _ := arraytool.InArray(r.Method, allowHttpMethods); existed {
+	if existed, _ := arraytool.InArray(r.Method, allowHttpMethods); !existed {
+		nethttp.Error(w, fmt.Sprintf("Method '%s' not allowed", r.Method), nethttp.StatusMethodNotAllowed)
+		log.Print(fmt.Sprintf("[trigger][http] Method '%s' not allowed", r.Method))
 
-		body, err := ioutil.ReadAll(r.Body)
-
-		if err != nil {
-			log.Printf("[trigger][http] Read http response body failed : %v", err)
-			nethttp.Error(w, "can't read body", nethttp.StatusBadRequest)
-			return
-		}
-
-		bodyContent := string(body)
-
-		var triggerPlugin pluginbase.ITriggerPlugin = trigger
-		trigger.FireAction(&triggerPlugin, &bodyContent)
-
-	} else {
-		nethttp.Error(w, fmt.Sprintf("[trigger][http] Method '%s' not allowed", r.Method), nethttp.StatusMethodNotAllowed)
+		return
 	}
 
+	body, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		log.Printf("[trigger][http] Read http response body failed : %v", err)
+		nethttp.Error(w, "can't read body", nethttp.StatusBadRequest)
+		return
+	}
+
+	var bodyContent, contentType string
+
+	if strings.EqualFold(r.Method, "POST") {
+		bodyContent = string(body)
+		contentType = r.Header.Get("Content-Type")
+
+		switch contentType {
+		case "application/json":
+		case "application/xml":
+		default:
+			nethttp.Error(w, fmt.Sprintf("Content-Type '%s' not supported", contentType), nethttp.StatusUnsupportedMediaType)
+			return
+		}
+	}
+
+	params := mux.Vars(r)
+	triggerID := params["triggerid"]
+
+	var triggerPlugin pluginbase.ITriggerPlugin = trigger
+
+	if triggerID == "" {
+		trigger.FireAction(&triggerPlugin, &bodyContent)
+	} else {
+		trigger.FireActionWithThrottlingID(&triggerPlugin, triggerID, &bodyContent)
+	}
 }
 
 func (trigger *HttpPlugin) onServerShutdown() {
