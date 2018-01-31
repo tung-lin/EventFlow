@@ -7,14 +7,15 @@ import (
 )
 
 type SettingConfig struct {
-	Address  string   `yaml:address`
-	Port     int      `yaml:port`
-	Username string   `yaml:username`
-	Password string   `yaml:password`
-	From     string   `yaml:from`
-	To       []string `yaml:to`
-	Subject  string   `yaml:subject`
-	Body     string   `yaml:body`
+	Address   string   `yaml:address`
+	Port      int      `yaml:port`
+	Username  string   `yaml:username`
+	Password  string   `yaml:password`
+	From      string   `yaml:from`
+	StaticTo  []string `yaml:staticto`
+	DynamicTo string   `yaml:dynamicto`
+	Subject   string   `yaml:subject`
+	Body      string   `yaml:body`
 }
 
 type EmailFactory struct {
