@@ -3,6 +3,8 @@ package main
 import (
 	"EventFlow/common/interface/pluginbase"
 	"EventFlow/plugin/action/email"
+	"EventFlow/plugin/action/line"
+	"EventFlow/plugin/filter/dbmysql"
 	"EventFlow/plugin/filter/json"
 	"EventFlow/plugin/filter/throttle"
 	"EventFlow/plugin/trigger/http"
@@ -28,7 +30,7 @@ func (loader PluginImportLoader) Load() (triggerFactories map[string]pluginbase.
 	var filterFactoryMap = make(map[string]pluginbase.IFilterFactory)
 	filters := []pluginbase.IFilterFactory{}
 
-	filters = append(filters, json.JSONFactory{}, throttle.ThrottleFactory{})
+	filters = append(filters, json.JSONFactory{}, throttle.ThrottleFactory{}, dbmysql.MySQLFactory{})
 
 	for _, filter := range filters {
 		filterFactoryMap[filter.GetIdentifyName()] = filter
@@ -38,7 +40,7 @@ func (loader PluginImportLoader) Load() (triggerFactories map[string]pluginbase.
 	var actionFactoryMap = make(map[string]pluginbase.IActionFactory)
 	actions := []pluginbase.IActionFactory{}
 
-	actions = append(actions, email.EmailFactory{})
+	actions = append(actions, email.EmailFactory{}, line.LineFactory{})
 
 	for _, action := range actions {
 		actionFactoryMap[action.GetIdentifyName()] = action

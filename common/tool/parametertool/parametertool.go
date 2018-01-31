@@ -1,6 +1,7 @@
 package parametertool
 
 import (
+	"log"
 	"regexp"
 	"strings"
 )
@@ -8,17 +9,34 @@ import (
 var regex = regexp.MustCompile(`{[^}]*}`)
 var replacer = strings.NewReplacer("{", "", "}", "")
 
-func ReplaceWithParameter(target *string, parameters *map[string]interface{}) {
+func ReplaceWithParameter(target *string, parameters *map[string]interface{}) (replaceResult string) {
 
-	matches := regex.FindAllString(*target, -1)
+	result := *target
+	matches := regex.FindAllString(result, -1)
 
 	for _, matchItem := range matches {
 
 		parmKey := replacer.Replace(matchItem)
-		parmValue := (*parameters)[parmKey]
+		parmValue, existed := (*parameters)[parmKey]
 
-		if newValue, ok := parmValue.(string); ok {
-			*target = strings.Replace(*target, "%"+matchItem, newValue, -1)
+		if !existed {
+			parmValue = ""
+		}
+
+		matchItem = "%" + matchItem
+
+		if value, ok := parmValue.(string); ok {
+			result = strings.Replace(result, matchItem, value, -1)
+		} else if values, ok := parmValue.([]interface{}); ok {
+			results := make([]string, len(values))
+			for index, value := range values {
+				results[index] = value.(string)
+			}
+			result = strings.Replace(result, matchItem, strings.Join(results, ","), -1)
+		} else {
+			log.Printf("cannot replace parameter %s", matchItem)
 		}
 	}
+
+	return result
 }

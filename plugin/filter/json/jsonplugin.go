@@ -16,15 +16,14 @@ func (filter *JSONPlugin) DoFilter(messageFromTrigger *string, parameters *map[s
 	err, jsonContent := isJSONFormat(*messageFromTrigger)
 
 	if err != nil {
-		log.Printf("[Filter][JSON] Content is not a valid json format: %v", err)
-		return false
-	}
-
-	for key, fieldPath := range filter.Setting.AddMetadata {
-		fieldValue := getField(fieldPath, jsonContent)
-
-		if fieldValue != "" {
-			(*parameters)[key] = fieldValue
+		log.Printf("[Filter][JSON] Content is not a valid json format data: %v", err)
+		for metadataKey := range filter.Setting.AddMetadata {
+			(*parameters)[metadataKey] = ""
+		}
+	} else {
+		for metadataKey, metadataParm := range filter.Setting.AddMetadata {
+			fieldValue := getField(metadataParm, jsonContent)
+			(*parameters)[metadataKey] = fieldValue
 		}
 	}
 

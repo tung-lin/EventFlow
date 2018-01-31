@@ -12,19 +12,15 @@ type ThrottlePlugin struct {
 	mutex             *sync.Mutex
 	throttleKey       string
 	throttlePolicyMap map[string]common.IThrottlingPolicy
-	parameterReplaced bool
 }
 
 func (filter *ThrottlePlugin) DoFilter(messageFromTrigger *string, parameters *map[string]interface{}) (doNextPipeline bool) {
 
+	key := parametertool.ReplaceWithParameter(&filter.Setting.Key, parameters)
+
 	filter.mutex.Lock()
 
-	if !filter.parameterReplaced {
-		filter.parameterReplaced = true
-		parametertool.ReplaceWithParameter(&filter.Setting.Key, parameters)
-	}
-
-	throttlePolicy, existed := filter.throttlePolicyMap[filter.Setting.Key]
+	throttlePolicy, existed := filter.throttlePolicyMap[key]
 
 	if !existed {
 		if filter.Setting.TriggerCount <= 0 {
@@ -32,7 +28,7 @@ func (filter *ThrottlePlugin) DoFilter(messageFromTrigger *string, parameters *m
 		} else {
 			throttlePolicy = policy.NewTriggerThreshold(filter.Setting)
 		}
-		filter.throttlePolicyMap[filter.Setting.Key] = throttlePolicy
+		filter.throttlePolicyMap[key] = throttlePolicy
 	}
 
 	filter.mutex.Unlock()
