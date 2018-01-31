@@ -8,15 +8,30 @@ filter:
     mode: json
     setting:
       addmetadata: 
-        key: "[key]"
-        test: "[level1][level2][test2]"
+        throttlekey: "[id]"   
+        providerid: "[providerid]" 
+        emailsubject: "[email][subject]"
+        emailbody: "[email][body]"
   -
     mode: throttle
     setting:
-        triggercount: 2
-        actioncount: 2
-        periodsecond: 10
-        key: "%{key}"
+      triggercount: 2
+      actioncount: 2
+      periodsecond: 10
+      key: "%{throttlekey}"
+  -
+    mode: mysql
+    setting:
+      ip: 192.168.8.142
+      user: admin
+      password: 3edc$RFV
+      database: isurveillance.authority
+      command: "select URI from usercontact where FK_User = '%{providerid}'"
+      addmetadata:
+        emailaddress: "[URI]"
+      cache:
+        cachekey: "%{providerid}"
+        timeoutsecond: 20
 
 action:
   - 
@@ -27,6 +42,12 @@ action:
       username: pplovable@gmail.com
       password: 
       from: pplovable@gmail.com
-      to: [tl.yu@iisigroup.com]
-      subject: "test %{subject}"
-      body: "test %{body}"
+      staticto: [tl.yu@iisigroup.com]
+      dynamicto: "%{emailaddress}"
+      subject: "test %{emailsubject}"
+      body: "test %{emailbody}"
+  -
+    mode: line
+    setting:
+      accesstoken: 2mJC8j7b1fdb6VnUISau31gsJdQWsjeoJ5mV48tnBoZ
+      message: "test line %{emailbody}"

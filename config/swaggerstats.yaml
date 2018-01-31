@@ -16,21 +16,3 @@ trigger:
         fields: [srcupdatetime, sysupdatetime]
         thresholdtype: minute 
         threshold: 5
-
-action:
-  - 
-    mode: email
-    setting:
-      address: smtp.gmail.com
-      port: 587
-      username: pplovable@gmail.com
-      password: 
-      from: pplovable@gmail.com
-      to: [tl.yu@iisigroup.com]
-      subject: "test %{subject}"
-      body: "test %{body}"
-    throttlingpolicy:
-        mode: actionlimitation
-        setting:
-          second: 5
-          limitation: 2
