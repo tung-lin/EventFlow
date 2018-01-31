@@ -159,7 +159,7 @@ func policyHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, throttlingID str
 		log.Printf("fire action...")
 
 		for _, actionPlugin := range pipelineActionMap[*triggerPlugin] {
-			actionPlugin.FireAction(messageFromTrigger, &parameters)
+			go actionPlugin.FireAction(messageFromTrigger, &parameters)
 		}
 	}()
 }
