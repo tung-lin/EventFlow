@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,7 +11,13 @@ import (
 )
 
 type Configuration struct {
-	Port string `yaml:port`
+	Log struct {
+		Level         string `yaml:level`
+		Path          string `yaml:path`
+		Verbose       bool   `yaml:verbose`
+		MaxSizeKB     int    `yaml:maxsizekb`
+		IncludeCaller bool   `yaml:includecaller`
+	} `yaml:log`
 }
 
 var Config Configuration
@@ -18,22 +25,33 @@ var Config Configuration
 func init() {
 
 	configFilePath, _ := os.Getwd()
-	file, err := ioutil.ReadFile(configFilePath + "/datacreator.yaml")
+	file, err := ioutil.ReadFile(configFilePath + "/config/config.yaml")
 
 	if err != nil {
-		log.Fatalf("Read config file failed: %v", err)
+		log.Printf("[tool][config] %s", fmt.Sprintf("read config file failed: %v", err))
+		os.Exit(1)
 	}
 
 	err = yaml.Unmarshal(file, &Config)
 
 	if err != nil {
-		log.Fatalf("Unmarshal config file failed: %v", err)
+		log.Printf("[tool][config] %s", fmt.Sprintf("unmarshal config file failed: %v", err))
+		os.Exit(1)
 	}
 
-	GetEnv("port", &Config.Port)
+	getEnv("log.level", &Config.Log.Level)
+	getEnv("log.path", &Config.Log.Path)
+
+	if Config.Log.MaxSizeKB == 0 {
+		Config.Log.MaxSizeKB = 1024
+	}
+
+	if Config.Log.Level == "" {
+		Config.Log.Level = "info"
+	}
 }
 
-func GetEnv(envName string, variable *string) {
+func getEnv(envName string, variable *string) {
 
 	envName = strings.ToLower(envName)
 	value, existed := os.LookupEnv(envName)

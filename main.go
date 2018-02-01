@@ -2,9 +2,12 @@ package main
 
 import (
 	"EventFlow/common/interface/pluginbase"
+	"EventFlow/common/tool/logtool"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"sync/atomic"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -30,11 +33,6 @@ type EventFlow struct {
 	} `yaml:action`
 }
 
-type ThrottlingPolicy struct {
-	Mode    string      `yaml:mode`
-	Setting interface{} `yaml:setting`
-}
-
 var loader IPluginLoader
 var ch chan bool
 
@@ -46,18 +44,30 @@ var pipelineFilterMap map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin
 var pipelineActionMap map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin
 
 func init() {
-	loader = PluginImportLoader{}
+	//loader = PluginImportLoader{}
 	//loader = PluginSharedObjectLoader{}
 
-	triggerFactoryMap, filterFactoryMap, actionFactoryMap = loader.Load()
+	//triggerFactoryMap, filterFactoryMap, actionFactoryMap = loader.Load()
 
-	pipelineFilterMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin)
-	pipelineActionMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin)
+	//pipelineFilterMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin)
+	//pipelineActionMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin)
 
-	LoadConfig()
+	var num int64
+
+	for {
+		//go func() {
+		//	num2 := atomic.AddInt64(&num, 1)
+		//	logtool.Debug("step", "mode", fmt.Sprintf("test - %d", num2))
+		//}()
+		num2 := atomic.AddInt64(&num, 1)
+		logtool.Debug("step", "mode", fmt.Sprintf("test - %d", num2))
+	}
+
+	//LoadConfig()
 }
 
 func main() {
+
 	<-ch
 	log.Print("exist")
 }
@@ -65,8 +75,8 @@ func main() {
 func LoadConfig() {
 
 	currentePath, _ := os.Getwd()
-	configPath := currentePath + "/config/"
-	files, err := ioutil.ReadDir(configPath)
+	pipelineConfigPath := currentePath + "/config/pipeline/"
+	files, err := ioutil.ReadDir(pipelineConfigPath)
 
 	if err != nil {
 		log.Print(err)
@@ -74,10 +84,10 @@ func LoadConfig() {
 	}
 
 	for _, file := range files {
-		pipelineFile, err := ioutil.ReadFile(configPath + file.Name())
+		pipelineFile, err := ioutil.ReadFile(pipelineConfigPath + file.Name())
 
 		if err != nil {
-			log.Fatalf("Read config file failed: %v", err)
+			logtool.Fatal("main", "main", fmt.Sprintf("read pipeline config file failed: %v", err))
 			continue
 		}
 
@@ -85,7 +95,7 @@ func LoadConfig() {
 		err = yaml.Unmarshal(pipelineFile, &config)
 
 		if err != nil {
-			log.Fatalf("Unmarshal config file failed: %v", err)
+			logtool.Fatal("main", "main", fmt.Sprintf("unmarshal pipeline config file failed: %v", err))
 			continue
 		}
 
@@ -105,7 +115,7 @@ func LoadConfig() {
 			continue
 		}
 
-		triggerPlugin.PolicyHandleFunc(policyHandleFunc)
+		triggerPlugin.ActionHandleFunc(actionHandleFunc)
 
 		for _, filter := range config.Filter {
 			filterFactory, existed := filterFactoryMap[filter.Mode]
@@ -145,7 +155,7 @@ func LoadConfig() {
 	}
 }
 
-func policyHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, throttlingID string, messageFromTrigger *string) {
+func actionHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, messageFromTrigger *string) {
 
 	parameters := make(map[string]interface{})
 

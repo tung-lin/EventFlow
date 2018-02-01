@@ -1,10 +1,10 @@
 package line
 
 import (
+	"EventFlow/common/tool/logtool"
 	"EventFlow/common/tool/parametertool"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -49,7 +49,7 @@ func (filter *LinePlugin) FireAction(messageFromTrigger *string, parameters *map
 	request, err := http.NewRequest(lineNotifyMethod, lineNotifyURL, body)
 
 	if err != nil {
-		log.Printf("[action][line] create http request failed: %v", err)
+		logtool.Error("action", "line", fmt.Sprintf("create http request failed: %v", err))
 		return
 	}
 
@@ -60,7 +60,7 @@ func (filter *LinePlugin) FireAction(messageFromTrigger *string, parameters *map
 	response, err := client.Do(request)
 
 	if err != nil {
-		log.Printf("[action][line] send http request failed: %v", err)
+		logtool.Error("action", "line", fmt.Sprintf("send http request failed: %v", err))
 		return
 	}
 
@@ -70,15 +70,15 @@ func (filter *LinePlugin) FireAction(messageFromTrigger *string, parameters *map
 	err = json.NewDecoder(response.Body).Decode(&notifyResponse)
 
 	if err != nil {
-		log.Printf("[action][line] decode http response body failed: %v", err)
+		logtool.Error("action", "line", fmt.Sprintf("decode http response body failed: %v", err))
 		return
 	}
 
-	log.Printf("[action][line] http response message: %s, status: %d", notifyResponse.Message, notifyResponse.Status)
+	logtool.Info("action", "line", fmt.Sprintf("http response message: %s, status: %d", notifyResponse.Message, notifyResponse.Status))
 
 	if response.StatusCode == http.StatusOK {
 		rateLimit := parseRateLimit(response.Header)
-		log.Printf("[action][line] limit: %d, remaining: %d, imagelimit: %d, imageremaining: %d, reset: %s", rateLimit.Limit, rateLimit.Remaining, rateLimit.ImageLimit, rateLimit.ImageRemaining, rateLimit.Reset.Format(time.RFC1123))
+		logtool.Info("action", "line", fmt.Sprintf("limit: %d, remaining: %d, imagelimit: %d, imageremaining: %d, reset: %s", rateLimit.Limit, rateLimit.Remaining, rateLimit.ImageLimit, rateLimit.ImageRemaining, rateLimit.Reset.Format(time.RFC1123)))
 	}
 }
 

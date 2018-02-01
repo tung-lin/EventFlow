@@ -3,10 +3,10 @@ package http
 import (
 	"EventFlow/common/interface/pluginbase"
 	"EventFlow/common/tool/arraytool"
+	"EventFlow/common/tool/logtool"
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strings"
 	"time"
 
@@ -17,7 +17,7 @@ import (
 
 type HttpPlugin struct {
 	currentServer *nethttp.Server
-	pluginbase.PolicyHandler
+	pluginbase.ActionHandler
 	Setting SettingConfig
 }
 
@@ -30,7 +30,7 @@ func (trigger *HttpPlugin) Start() {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", handler)
-	router.HandleFunc("/trigger/{triggerid:.*}", handler)
+	//router.HandleFunc("/trigger/{triggerid:.*}", handler)
 
 	addr := fmt.Sprintf(":%d", trigger.Setting.Port)
 
@@ -43,10 +43,10 @@ func (trigger *HttpPlugin) Start() {
 
 	trigger.currentServer.RegisterOnShutdown(trigger.onServerShutdown)
 
-	log.Printf("[trigger][http] Listening at %s", addr)
+	logtool.Debug("trigger", "http", fmt.Sprintf("create http listener at %s...", addr))
 
 	if err := trigger.currentServer.ListenAndServe(); err != nil {
-		log.Printf("[trigger][http] Listening at %s failed\r\n%s", addr, err)
+		logtool.Error("trigger", "http", fmt.Sprintf("create http listener at %s failed: %v", addr, err))
 	}
 }
 
@@ -58,27 +58,26 @@ func (trigger *HttpPlugin) Stop() {
 		defer cancel()
 
 		if err := trigger.currentServer.Shutdown(ctx); err != nil {
-			log.Printf("Server shutdown failed:%s", err)
+			logtool.Error("trigger", "http", fmt.Sprintf("http listener shutdown failed: %v", err))
 		}
 	}
 }
 
 func (trigger *HttpPlugin) handleRequestFunc(w nethttp.ResponseWriter, r *nethttp.Request) {
 
-	log.Printf("http %s %s%s", r.Method, r.Host, r.URL)
+	logtool.Debug("trigger", "http", fmt.Sprintf("http %s %s%s", r.Method, r.Host, r.URL))
 
 	if existed, _ := arraytool.InArray(r.Method, allowHttpMethods); !existed {
-		nethttp.Error(w, fmt.Sprintf("Method '%s' not allowed", r.Method), nethttp.StatusMethodNotAllowed)
-		log.Print(fmt.Sprintf("[trigger][http] Method '%s' not allowed", r.Method))
-
+		nethttp.Error(w, fmt.Sprintf("http method '%s' not allowed", r.Method), nethttp.StatusMethodNotAllowed)
+		logtool.Error("trigger", "http", fmt.Sprintf("http method '%s' not allowed", r.Method))
 		return
 	}
 
 	body, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		log.Printf("[trigger][http] Read http response body failed : %v", err)
 		nethttp.Error(w, "can't read body", nethttp.StatusBadRequest)
+		logtool.Error("trigger", "http", fmt.Sprintf("read http response body failed : %v", err))
 		return
 	}
 
@@ -90,25 +89,17 @@ func (trigger *HttpPlugin) handleRequestFunc(w nethttp.ResponseWriter, r *nethtt
 
 		switch contentType {
 		case "application/json":
-		case "application/xml":
 		default:
 			nethttp.Error(w, fmt.Sprintf("Content-Type '%s' not supported", contentType), nethttp.StatusUnsupportedMediaType)
+			logtool.Error("trigger", "http", fmt.Sprintf("Content-Type '%s' not supported", contentType))
 			return
 		}
 	}
 
-	params := mux.Vars(r)
-	triggerID := params["triggerid"]
-
 	var triggerPlugin pluginbase.ITriggerPlugin = trigger
-
-	if triggerID == "" {
-		trigger.FireAction(&triggerPlugin, &bodyContent)
-	} else {
-		trigger.FireActionWithThrottlingID(&triggerPlugin, triggerID, &bodyContent)
-	}
+	trigger.FireAction(&triggerPlugin, &bodyContent)
 }
 
 func (trigger *HttpPlugin) onServerShutdown() {
-	log.Printf("[trigger][http] Server '%s' shutdown...", trigger.currentServer.Addr)
+	logtool.Debug("trigger", "http", fmt.Sprintf("http listener '%s' shutdown...", trigger.currentServer.Addr))
 }

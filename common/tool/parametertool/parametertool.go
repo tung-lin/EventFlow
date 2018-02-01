@@ -1,7 +1,8 @@
 package parametertool
 
 import (
-	"log"
+	"EventFlow/common/tool/logtool"
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -34,7 +35,7 @@ func ReplaceWithParameter(target *string, parameters *map[string]interface{}) (r
 			}
 			result = strings.Replace(result, matchItem, strings.Join(results, ","), -1)
 		} else {
-			log.Printf("cannot replace parameter %s", matchItem)
+			logtool.Error("tool", "parameter", fmt.Sprintf("cannot replace parameter %s", matchItem))
 		}
 	}
 

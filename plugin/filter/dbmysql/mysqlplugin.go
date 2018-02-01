@@ -3,9 +3,10 @@ package dbmysql
 import (
 	"EventFlow/common/tool/arraytool"
 	"EventFlow/common/tool/cachetool"
+	"EventFlow/common/tool/logtool"
 	"EventFlow/common/tool/parametertool"
 	"database/sql"
-	"log"
+	"fmt"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
@@ -53,7 +54,7 @@ func (filter *MySQLPlugin) DoFilter(messageFromTrigger *string, parameters *map[
 	defer close(db)
 
 	if err != nil {
-		log.Printf("[filter][mysql] open db connection failed: %v", err)
+		logtool.Error("filter", "mysql", fmt.Sprintf("open db connection failed: %v", err))
 	} else {
 		command := parametertool.ReplaceWithParameter(&filter.Setting.Command, parameters)
 
@@ -61,7 +62,7 @@ func (filter *MySQLPlugin) DoFilter(messageFromTrigger *string, parameters *map[
 		defer rows.Close()
 
 		if err != nil {
-			log.Printf("[filter][mysql] query db failed: %v", err)
+			logtool.Error("filter", "mysql", fmt.Sprintf("query db failed: %v", err))
 		} else {
 
 			recordMaps := []map[string]interface{}{}

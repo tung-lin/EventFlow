@@ -2,7 +2,6 @@ package cachetool
 
 import (
 	"EventFlow/common/tool/parametertool"
-	"log"
 	"sync"
 	"time"
 )
@@ -48,7 +47,7 @@ func GetCache(cacheKey string) (cacheValue interface{}, existed bool) {
 	if existed {
 		cacheValue = cacheData.data
 	} else {
-		log.Printf("[cachetool] cache data doesn,t exist", cacheKey)
+		//log.Printf("[cachetool] cache data doesn't exist %s", cacheKey)
 	}
 
 	mutex.Unlock()

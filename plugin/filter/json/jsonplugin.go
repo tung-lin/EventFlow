@@ -2,7 +2,9 @@ package json
 
 import (
 	"EventFlow/common/tool/arraytool"
+	"EventFlow/common/tool/logtool"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 )
@@ -16,7 +18,7 @@ func (filter *JSONPlugin) DoFilter(messageFromTrigger *string, parameters *map[s
 	err, jsonContent := isJSONFormat(*messageFromTrigger)
 
 	if err != nil {
-		log.Printf("[Filter][JSON] Content is not a valid json format data: %v", err)
+		logtool.Error("filter", "JSON", fmt.Sprintf("content is not a valid json format data: %v", err))
 		for metadataKey := range filter.Setting.AddMetadata {
 			(*parameters)[metadataKey] = ""
 		}

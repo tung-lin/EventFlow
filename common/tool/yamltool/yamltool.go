@@ -1,7 +1,8 @@
 package yamltool
 
 import (
-	"log"
+	"EventFlow/common/tool/logtool"
+	"fmt"
 
 	"gopkg.in/yaml.v2"
 )
@@ -23,7 +24,7 @@ func structToByteArray(setting interface{}) (bytes []byte) {
 	bytes, err := yaml.Marshal(setting)
 
 	if err != nil {
-		log.Printf("Marshal yaml config to byte array failed: %v", err)
+		logtool.Error("tool", "yaml", fmt.Sprintf("marshal yaml config to byte array failed: %v", err))
 		return nil
 	}
 

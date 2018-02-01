@@ -26,7 +26,7 @@ type SwaggerConfig struct {
 }
 
 type SwaggerStatusPlugin struct {
-	pluginbase.PolicyHandler
+	pluginbase.ActionHandler
 	Setting       SettingConfig
 	swaggerConfig SwaggerConfig
 }

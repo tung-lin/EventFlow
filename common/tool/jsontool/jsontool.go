@@ -1,8 +1,9 @@
 package jsontool
 
 import (
+	"EventFlow/common/tool/logtool"
 	"encoding/json"
-	"log"
+	"fmt"
 )
 
 func UnmarshalToType(in interface{}, out interface{}) (err error) {
@@ -22,7 +23,7 @@ func structToByteArray(setting interface{}) (bytes []byte) {
 	bytes, err := json.Marshal(setting)
 
 	if err != nil {
-		log.Printf("Marshal json config to byte array failed: %v", err)
+		logtool.Error("tool", "json", fmt.Sprintf("marshal json config to byte array failed: %v", err))
 		return nil
 	}
 
