@@ -51,7 +51,7 @@ func init() {
 	pipelineFilterMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin)
 	pipelineActionMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin)
 
-	LoadConfig()
+	loadConfig()
 }
 
 func main() {
@@ -60,7 +60,7 @@ func main() {
 	log.Print("exist")
 }
 
-func LoadConfig() {
+func loadConfig() {
 
 	currentePath, _ := os.Getwd()
 	pipelineConfigPath := currentePath + "/config/pipeline/"
