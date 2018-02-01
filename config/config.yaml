@@ -1,0 +1,6 @@
+log:
+  level: debug
+  path: logs/
+  verbose: true
+  maxsizekb: 100
+  includecaller: true
