@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"sync/atomic"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -44,26 +43,15 @@ var pipelineFilterMap map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin
 var pipelineActionMap map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin
 
 func init() {
-	//loader = PluginImportLoader{}
+	loader = PluginImportLoader{}
 	//loader = PluginSharedObjectLoader{}
 
-	//triggerFactoryMap, filterFactoryMap, actionFactoryMap = loader.Load()
+	triggerFactoryMap, filterFactoryMap, actionFactoryMap = loader.Load()
 
-	//pipelineFilterMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin)
-	//pipelineActionMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin)
+	pipelineFilterMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin)
+	pipelineActionMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin)
 
-	var num int64
-
-	for {
-		//go func() {
-		//	num2 := atomic.AddInt64(&num, 1)
-		//	logtool.Debug("step", "mode", fmt.Sprintf("test - %d", num2))
-		//}()
-		num2 := atomic.AddInt64(&num, 1)
-		logtool.Debug("step", "mode", fmt.Sprintf("test - %d", num2))
-	}
-
-	//LoadConfig()
+	LoadConfig()
 }
 
 func main() {
