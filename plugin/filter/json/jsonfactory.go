@@ -7,7 +7,7 @@ import (
 )
 
 type SettingConfig struct {
-	AddMetadata map[string]string `yaml:addmetadata`
+	AddMetadata map[string]string `yaml:"addmetadata"`
 }
 
 type JSONFactory struct {

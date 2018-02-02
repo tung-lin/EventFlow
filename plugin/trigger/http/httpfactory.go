@@ -7,7 +7,7 @@ import (
 )
 
 type SettingConfig struct {
-	Port int `yaml:port`
+	Port int `yaml:"port"`
 }
 
 type HttpFactory struct {

@@ -17,19 +17,19 @@ type IPluginLoader interface {
 
 type EventFlow struct {
 	Trigger struct {
-		Mode    string      `yaml:mode`
-		Setting interface{} `yaml:setting`
-	} `yaml:trigger`
+		Mode    string      `yaml:"mode"`
+		Setting interface{} `yaml:"setting"`
+	} `yaml:"trigger"`
 
 	Filter []struct {
-		Mode    string      `yaml:mode`
-		Setting interface{} `yaml:setting`
-	} `yaml:filter`
+		Mode    string      `yaml:"mode"`
+		Setting interface{} `yaml:"setting"`
+	} `yaml:"filter"`
 
 	Action []struct {
-		Mode    string      `yaml:mode`
-		Setting interface{} `yaml:setting`
-	} `yaml:action`
+		Mode    string      `yaml:"mode"`
+		Setting interface{} `yaml:"setting"`
+	} `yaml:"action"`
 }
 
 var loader IPluginLoader

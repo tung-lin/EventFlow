@@ -8,13 +8,13 @@ import (
 )
 
 type SettingConfig struct {
-	IP          string            `yaml:ip`
-	User        string            `yaml:user`
-	Password    string            `yaml:password`
-	Database    string            `yaml:database`
-	Command     string            `yaml:command`
-	AddMetadata map[string]string `yaml:addmetadata`
-	Cache       cachetool.Cache   `yaml:cache`
+	IP          string            `yaml:"ip"`
+	User        string            `yaml:"user"`
+	Password    string            `yaml:"password"`
+	Database    string            `yaml:"database"`
+	Command     string            `yaml:"command"`
+	AddMetadata map[string]string `yaml:"addmetadata"`
+	Cache       cachetool.Cache   `yaml:"cache"`
 }
 
 type MySQLFactory struct {

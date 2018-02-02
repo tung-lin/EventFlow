@@ -7,8 +7,8 @@ import (
 )
 
 type SettingConfig struct {
-	AccessToken string `yaml:accesstoken`
-	Message     string `yaml:message`
+	AccessToken string `yaml:"accesstoken"`
+	Message     string `yaml:"message"`
 }
 
 type LineFactory struct {
