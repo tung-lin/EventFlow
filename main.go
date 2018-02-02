@@ -145,14 +145,18 @@ func loadConfig() {
 
 func actionHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, messageFromTrigger *string) {
 
-	parameters := make(map[string]interface{})
-
 	go func() {
+		parameters := make(map[string]interface{})
+
+		//start := time.Now()
+
 		for _, filterPlugin := range pipelineFilterMap[*triggerPlugin] {
 			if doNextPipeline := filterPlugin.DoFilter(messageFromTrigger, &parameters); !doNextPipeline {
 				return
 			}
 		}
+
+		//log.Printf("took %s", time.Since(start))
 
 		log.Printf("fire action...")
 
