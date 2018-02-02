@@ -2,26 +2,22 @@ package policy
 
 import (
 	"EventFlow/plugin/filter/throttle/common"
-	"sync"
 	"sync/atomic"
 	"time"
 )
 
 type TriggerThreshold struct {
 	timer               *time.Timer
-	mutex               *sync.Mutex
 	currentTriggerCount int32
 	currentExecuteCount int32
 	Setting             common.SettingConfig
 }
 
 func NewTriggerThreshold(setting common.SettingConfig) *TriggerThreshold {
-	return &TriggerThreshold{Setting: setting, mutex: &sync.Mutex{}}
+	return &TriggerThreshold{Setting: setting}
 }
 
 func (plugin *TriggerThreshold) Throttling() bool {
-
-	plugin.mutex.Lock()
 
 	if plugin.timer == nil {
 		plugin.timer = time.AfterFunc(time.Second*time.Duration(plugin.Setting.PeriodSecond), func() {
@@ -33,8 +29,6 @@ func (plugin *TriggerThreshold) Throttling() bool {
 			plugin.timer.Reset(time.Second * time.Duration(plugin.Setting.PeriodSecond))
 		}
 	}
-
-	plugin.mutex.Unlock()
 
 	atomic.AddInt32(&plugin.currentTriggerCount, 1)
 	canExecuteAction := atomic.LoadInt32(&plugin.currentTriggerCount) >= int32(plugin.Setting.TriggerCount) && atomic.LoadInt32(&plugin.currentExecuteCount) < int32(plugin.Setting.ActionCount)
