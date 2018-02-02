@@ -12,12 +12,12 @@ import (
 )
 
 type logdata struct {
-	Level     string    `json:level`
-	Message   string    `json:message`
-	Step      string    `json:step`
-	Mode      string    `json:mode`
-	ErrorLine string    `json:errorline,omitempty`
-	Timestamp time.Time `json:timestamp`
+	Level     string    `json:"level"`
+	Message   string    `json:"message"`
+	Step      string    `json:"step"`
+	Mode      string    `json:"mode"`
+	ErrorLine string    `json:"errorline,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 type sysLogger struct {

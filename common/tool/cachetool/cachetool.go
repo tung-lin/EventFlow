@@ -7,8 +7,8 @@ import (
 )
 
 type Cache struct {
-	CacheKey      string `yaml:cachekey`
-	TimeoutSecond int    `yaml:timeoutsecond`
+	CacheKey      string `yaml:"cachekey"`
+	TimeoutSecond int    `yaml:"timeoutsecond"`
 }
 
 type cacheData struct {

@@ -12,12 +12,12 @@ import (
 
 type Configuration struct {
 	Log struct {
-		Level         string `yaml:level`
-		Path          string `yaml:path`
-		Verbose       bool   `yaml:verbose`
-		MaxSizeKB     int    `yaml:maxsizekb`
-		IncludeCaller bool   `yaml:includecaller`
-	} `yaml:log`
+		Level         string `yaml:"level"`
+		Path          string `yaml:"path"`
+		Verbose       bool   `yaml:"verbose"`
+		MaxSizeKB     int    `yaml:"maxsizekb"`
+		IncludeCaller bool   `yaml:"includecaller"`
+	} `yaml:"log"`
 }
 
 var Config Configuration

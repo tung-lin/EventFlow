@@ -13,16 +13,16 @@ import (
 )
 
 type SwaggerConfig struct {
-	Host     string   `json:host`
-	BasePath string   `json:basePath`
-	Schemes  []string `schemes`
+	Host     string   `json:"host"`
+	BasePath string   `json:"basePath"`
+	Schemes  []string `json:"schemes"`
 	Paths    map[string]map[string]struct {
-		Tags        []string `json:tags`
-		Summary     string   `json:summary`
-		Description string   `json:description`
-		OperationID string   `json:operationId`
-		Deprecated  bool     `json:deprecated`
-	} `json:paths`
+		Tags        []string `json:"tags"`
+		Summary     string   `json:"summary"`
+		Description string   `json:"description"`
+		OperationID string   `json:"operationId"`
+		Deprecated  bool     `json:"deprecated"`
+	} `json:"paths"`
 }
 
 type SwaggerStatusPlugin struct {
