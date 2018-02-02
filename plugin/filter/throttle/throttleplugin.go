@@ -31,7 +31,9 @@ func (filter *ThrottlePlugin) DoFilter(messageFromTrigger *string, parameters *m
 		filter.throttlePolicyMap[key] = throttlePolicy
 	}
 
+	doNextPipeline = throttlePolicy.Throttling()
+
 	filter.mutex.Unlock()
 
-	return throttlePolicy.Throttling()
+	return
 }
