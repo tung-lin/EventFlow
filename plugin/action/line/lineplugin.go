@@ -12,14 +12,16 @@ import (
 	"time"
 )
 
-const lineNotifyMethod = "POST"
-const lineNotifyURL = "https://notify-api.line.me/api/notify"
-const lineNotifyContentType = "application/x-www-form-urlencoded"
-const limit = "X-RateLimit-Limit"
-const remaining = "X-RateLimit-Remaining"
-const imagelimit = "X-RateLimit-ImageLimit"
-const imageremaining = "X-RateLimit-ImageRemaining"
-const reset = "X-RateLimit-Reset"
+const (
+	lineNotifyMethod      = "POST"
+	lineNotifyURL         = "https://notify-api.line.me/api/notify"
+	lineNotifyContentType = "application/x-www-form-urlencoded"
+	limit                 = "X-RateLimit-Limit"
+	remaining             = "X-RateLimit-Remaining"
+	imagelimit            = "X-RateLimit-ImageLimit"
+	imageremaining        = "X-RateLimit-ImageRemaining"
+	reset                 = "X-RateLimit-Reset"
+)
 
 type LinePlugin struct {
 	Setting SettingConfig
@@ -74,11 +76,11 @@ func (filter *LinePlugin) FireAction(messageFromTrigger *string, parameters *map
 		return
 	}
 
-	logtool.Info("action", "line", fmt.Sprintf("http response message: %s, status: %d", notifyResponse.Message, notifyResponse.Status))
+	logtool.Debug("action", "line", fmt.Sprintf("http response message: %s, status: %d", notifyResponse.Message, notifyResponse.Status))
 
 	if response.StatusCode == http.StatusOK {
 		rateLimit := parseRateLimit(response.Header)
-		logtool.Info("action", "line", fmt.Sprintf("limit: %d, remaining: %d, imagelimit: %d, imageremaining: %d, reset: %s", rateLimit.Limit, rateLimit.Remaining, rateLimit.ImageLimit, rateLimit.ImageRemaining, rateLimit.Reset.Format(time.RFC1123)))
+		logtool.Debug("action", "line", fmt.Sprintf("limit: %d, remaining: %d, imagelimit: %d, imageremaining: %d, reset: %s", rateLimit.Limit, rateLimit.Remaining, rateLimit.ImageLimit, rateLimit.ImageRemaining, rateLimit.Reset.Format(time.RFC1123)))
 	}
 }
 
