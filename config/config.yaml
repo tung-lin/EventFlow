@@ -2,5 +2,5 @@ log:
   level: debug
   path: logs/
   verbose: true
-  maxsizekb: 100
+  maxsizekb: 5000
   includecaller: true
