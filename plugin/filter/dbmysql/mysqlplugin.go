@@ -57,9 +57,7 @@ func (filter *MySQLPlugin) DoFilter(messageFromTrigger *string, parameters *map[
 		logtool.Error("filter", "mysql", fmt.Sprintf("open db connection failed: %v", err))
 	} else {
 		command := parametertool.ReplaceWithParameter(&filter.Setting.Command, parameters)
-
 		rows, err := db.Query(command)
-		defer rows.Close()
 
 		if err != nil {
 			logtool.Error("filter", "mysql", fmt.Sprintf("query db failed: %v", err))
@@ -115,6 +113,8 @@ func (filter *MySQLPlugin) DoFilter(messageFromTrigger *string, parameters *map[
 
 				(*parameters)[metadataKey] = results
 			}
+
+			rows.Close()
 		}
 	}
 
