@@ -8,12 +8,12 @@ import (
 	"plugin"
 )
 
-type PluginSharedObjectLoader struct {
+type pluginSharedObjectLoader struct {
 	triggerFactoryMap map[string]pluginbase.ITriggerFactory
 	actionFactoryMap  map[string]pluginbase.IActionFactory
 }
 
-func (loader PluginSharedObjectLoader) Load() (triggerFactories map[string]pluginbase.ITriggerFactory, actionFactories map[string]pluginbase.IActionFactory) {
+func (loader pluginSharedObjectLoader) Load() (triggerFactories map[string]pluginbase.ITriggerFactory, actionFactories map[string]pluginbase.IActionFactory) {
 
 	triggerFactoryMap = make(map[string]pluginbase.ITriggerFactory)
 	actionFactoryMap = make(map[string]pluginbase.IActionFactory)
@@ -23,7 +23,7 @@ func (loader PluginSharedObjectLoader) Load() (triggerFactories map[string]plugi
 	return triggerFactoryMap, actionFactoryMap
 }
 
-func (loader PluginSharedObjectLoader) loadPlugin() {
+func (loader pluginSharedObjectLoader) loadPlugin() {
 
 	currentePath, _ := os.Getwd()
 	pluginPath := currentePath + "/plugin/"

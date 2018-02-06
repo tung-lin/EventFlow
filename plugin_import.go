@@ -11,10 +11,10 @@ import (
 	"EventFlow/plugin/trigger/swaggerstats"
 )
 
-type PluginImportLoader struct {
+type pluginImportLoader struct {
 }
 
-func (loader PluginImportLoader) Load() (triggerFactories map[string]pluginbase.ITriggerFactory, filterFactories map[string]pluginbase.IFilterFactory, actionFactories map[string]pluginbase.IActionFactory) {
+func (loader pluginImportLoader) Load() (triggerFactories map[string]pluginbase.ITriggerFactory, filterFactories map[string]pluginbase.IFilterFactory, actionFactories map[string]pluginbase.IActionFactory) {
 
 	//create trigger factories
 	var triggerFactoryMap = make(map[string]pluginbase.ITriggerFactory)

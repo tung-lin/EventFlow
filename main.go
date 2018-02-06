@@ -15,7 +15,7 @@ type IPluginLoader interface {
 	Load() (triggerFactories map[string]pluginbase.ITriggerFactory, filterFactories map[string]pluginbase.IFilterFactory, actionFactories map[string]pluginbase.IActionFactory)
 }
 
-type EventFlow struct {
+type eventFlow struct {
 	Trigger struct {
 		Mode    string      `yaml:"mode"`
 		Setting interface{} `yaml:"setting"`
@@ -32,7 +32,6 @@ type EventFlow struct {
 	} `yaml:"action"`
 }
 
-var loader IPluginLoader
 var ch chan bool
 
 var triggerFactoryMap map[string]pluginbase.ITriggerFactory
@@ -43,8 +42,8 @@ var pipelineFilterMap map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin
 var pipelineActionMap map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin
 
 func init() {
-	loader = PluginImportLoader{}
-	//loader = PluginSharedObjectLoader{}
+	loader := pluginImportLoader{}
+	//loader := pluginSharedObjectLoader{}
 
 	triggerFactoryMap, filterFactoryMap, actionFactoryMap = loader.Load()
 
@@ -79,7 +78,7 @@ func loadConfig() {
 			continue
 		}
 
-		var config EventFlow
+		var config eventFlow
 		err = yaml.Unmarshal(pipelineFile, &config)
 
 		if err != nil {
