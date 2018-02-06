@@ -2,4 +2,4 @@
 
 ### Dependencies
 
-- Go 1.9
+- Go 1.9.2
