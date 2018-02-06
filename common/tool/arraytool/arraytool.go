@@ -2,7 +2,8 @@ package arraytool
 
 import "reflect"
 
-func InArray(val interface{}, array interface{}) (exists bool, index int) {
+//InArray reports whether value exists and inside array
+func InArray(value interface{}, array interface{}) (exists bool, index int) {
 	exists = false
 	index = -1
 
@@ -11,7 +12,7 @@ func InArray(val interface{}, array interface{}) (exists bool, index int) {
 		s := reflect.ValueOf(array)
 
 		for i := 0; i < s.Len(); i++ {
-			if reflect.DeepEqual(val, s.Index(i).Interface()) == true {
+			if reflect.DeepEqual(value, s.Index(i).Interface()) == true {
 				index = i
 				exists = true
 				return
@@ -22,10 +23,11 @@ func InArray(val interface{}, array interface{}) (exists bool, index int) {
 	return
 }
 
-func RemoveItem(items []string, removeTarget string) (results []string) {
+//RemoveItem remove value from array
+func RemoveItem(value string, array []string) (results []string) {
 
-	for _, item := range items {
-		if item != removeTarget {
+	for _, item := range array {
+		if item != value {
 			results = append(results, item)
 		}
 	}

@@ -11,10 +11,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-type IPluginLoader interface {
-	Load() (triggerFactories map[string]pluginbase.ITriggerFactory, filterFactories map[string]pluginbase.IFilterFactory, actionFactories map[string]pluginbase.IActionFactory)
-}
-
 type eventFlow struct {
 	Trigger struct {
 		Mode    string      `yaml:"mode"`

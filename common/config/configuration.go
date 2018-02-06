@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Configuration struct {
+type configuration struct {
 	Log struct {
 		Level         string `yaml:"level"`
 		Path          string `yaml:"path"`
@@ -20,7 +20,7 @@ type Configuration struct {
 	} `yaml:"log"`
 }
 
-var Config Configuration
+var Config configuration
 
 func init() {
 
