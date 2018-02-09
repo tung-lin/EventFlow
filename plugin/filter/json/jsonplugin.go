@@ -15,7 +15,7 @@ type JSONPlugin struct {
 
 func (filter *JSONPlugin) DoFilter(messageFromTrigger *string, parameters *map[string]interface{}) (doNextPipeline bool) {
 
-	err, jsonContent := isJSONFormat(*messageFromTrigger)
+	jsonContent, err := isJSONFormat(*messageFromTrigger)
 
 	if err != nil {
 		logtool.Error("filter", "JSON", fmt.Sprintf("content is not a valid json format data: %v", err))
@@ -32,18 +32,18 @@ func (filter *JSONPlugin) DoFilter(messageFromTrigger *string, parameters *map[s
 	return true
 }
 
-func isJSONFormat(content string) (err error, jsonContent map[string]*json.RawMessage) {
+func isJSONFormat(content string) (jsonContent map[string]*json.RawMessage, err error) {
 
 	data := []byte(content)
 	err = json.Unmarshal(data, &jsonContent)
 
-	return err, jsonContent
+	return jsonContent, err
 }
 
 func getField(fieldPath string, jsonContent map[string]*json.RawMessage) (fieldValue string) {
 
 	paths := strings.Split(fieldPath, "]")
-	paths = arraytool.RemoveItem(paths, "")
+	paths = arraytool.RemoveItem("", paths)
 
 	if len(paths) == 0 {
 		return ""
@@ -76,13 +76,13 @@ func getField(fieldPath string, jsonContent map[string]*json.RawMessage) (fieldV
 			}
 
 			return stringValue
-		} else {
-			err := json.Unmarshal(*value, &objectMap)
+		}
 
-			if err != nil {
-				log.Printf("%v", err)
-				break
-			}
+		err := json.Unmarshal(*value, &objectMap)
+
+		if err != nil {
+			log.Printf("%v", err)
+			break
 		}
 	}
 
