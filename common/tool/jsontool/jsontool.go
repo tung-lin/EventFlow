@@ -6,6 +6,7 @@ import (
 	"fmt"
 )
 
+//UnmarshalToType converts unkonwn type in and assigns values into the out value
 func UnmarshalToType(in interface{}, out interface{}) (err error) {
 
 	bytes := structToByteArray(in)
