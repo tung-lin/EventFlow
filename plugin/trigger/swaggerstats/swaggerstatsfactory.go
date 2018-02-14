@@ -4,21 +4,32 @@ import (
 	"EventFlow/common/interface/pluginbase"
 	"EventFlow/common/tool/yamltool"
 	"log"
+	"strings"
 )
 
-//yaml config
+//SettingConfig represents a configurations for api status monitoring
 type SettingConfig struct {
-	SwaggerURL     string   `yaml:"swagger_url"`
-	APIIP          string   `yaml:"api_ip"`
-	APIPath        string   `yaml:"api_path"`
-	SkipOperations []string `yaml:"skip_operations"`
-	Operations     []struct {
-		OperationID   string   `yaml:"operaionid"`
-		Condition     string   `yaml:"condition"`
-		Fields        []string `yaml:"fields"`
-		ThresholdType string   `yaml:"thresholdtype"`
-		Threshold     string   `yaml:"threshold"`
-	} `yaml:"operations"`
+	SwaggerURL         string      `yaml:"swagger_url"`
+	APIIP              string      `yaml:"api_ip"`
+	APIPath            string      `yaml:"api_path"`
+	MonitorIntervalSec int         `yaml:"monitor_interval_sec"`
+	MonitorTimeoutSec  int         `yaml:"monitor_timeout_sec"`
+	ODataTop           int         `yaml:"odata_top"`
+	ODataFormat        string      `yaml:"odata_format"`
+	SkipOperations     []string    `yaml:"skip_operations"`
+	Operations         []operation `yaml:"operations"`
+}
+
+type operation struct {
+	OperationID        string   `yaml:"operaionid"`
+	Condition          string   `yaml:"condition"`
+	MonitorIntervalSec int      `yaml:"monitor_interval_sec"`
+	MonitorTimeoutSec  int      `yaml:"monitor_timeout_sec"`
+	ODataTop           int      `yaml:"odata_top"`
+	ODataFormat        string   `yaml:"odata_format"`
+	Fields             []string `yaml:"fields"`
+	ThresholdType      string   `yaml:"thresholdtype"`
+	Threshold          string   `yaml:"threshold"`
 }
 
 type SwaggerStatsFactory struct {
@@ -35,6 +46,23 @@ func (factory SwaggerStatsFactory) CreateTrigger(config interface{}) pluginbase.
 
 	if err != nil {
 		log.Print(err)
+	} else {
+
+		if settingConfig.ODataFormat != "" && !strings.EqualFold(settingConfig.ODataFormat, "json") && !strings.EqualFold(settingConfig.ODataFormat, "xml") {
+			settingConfig.ODataFormat = "json"
+		}
+
+		if settingConfig.MonitorIntervalSec == 0 || settingConfig.MonitorIntervalSec < 20 {
+			settingConfig.MonitorIntervalSec = 20
+		}
+
+		if settingConfig.MonitorTimeoutSec == 0 {
+			settingConfig.MonitorTimeoutSec = 10
+		}
+
+		if settingConfig.ODataTop > 20 {
+			settingConfig.ODataTop = 1
+		}
 	}
 
 	return &SwaggerStatusPlugin{Setting: settingConfig}
