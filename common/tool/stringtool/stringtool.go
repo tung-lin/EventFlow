@@ -14,6 +14,7 @@ func init() {
 	random = rand.New(rand.NewSource(time.Now().UnixNano()))
 }
 
+//CreateRandomString generates a eight bytes random string
 func CreateRandomString() string {
 
 	result := make([]byte, defaultStringLen)
@@ -25,6 +26,7 @@ func CreateRandomString() string {
 	return string(result)
 }
 
+//CreateRandomStringWithLen generates a strlen bytes random string
 func CreateRandomStringWithLen(strlen int) string {
 
 	result := make([]byte, strlen)

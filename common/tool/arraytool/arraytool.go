@@ -2,7 +2,7 @@ package arraytool
 
 import "reflect"
 
-//InArray reports whether value exists and inside array
+//InArray checks whether array already contains value or not
 func InArray(value interface{}, array interface{}) (exists bool, index int) {
 	exists = false
 	index = -1
@@ -23,7 +23,7 @@ func InArray(value interface{}, array interface{}) (exists bool, index int) {
 	return
 }
 
-//RemoveItem remove value from array
+//RemoveItem removes value from array
 func RemoveItem(value string, array []string) (results []string) {
 
 	for _, item := range array {

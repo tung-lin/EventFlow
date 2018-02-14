@@ -10,6 +10,7 @@ import (
 var regex = regexp.MustCompile(`{[^}]*}`)
 var replacer = strings.NewReplacer("{", "", "}", "")
 
+//ReplaceWithParameter replaces variables in target using parameters
 func ReplaceWithParameter(target *string, parameters *map[string]interface{}) (replaceResult string) {
 
 	result := *target
