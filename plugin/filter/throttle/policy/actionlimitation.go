@@ -6,16 +6,19 @@ import (
 	"time"
 )
 
+//An ActionLimitation represents throttling parameters
 type ActionLimitation struct {
 	timer               *time.Timer
 	currentExecuteCount int32
 	Setting             common.SettingConfig
 }
 
+//NewActionLimitation create a new event throttling policy
 func NewActionLimitation(setting common.SettingConfig) *ActionLimitation {
 	return &ActionLimitation{Setting: setting}
 }
 
+//Throttling decides whether to fire action or not
 func (plugin *ActionLimitation) Throttling() bool {
 
 	if plugin.timer == nil {

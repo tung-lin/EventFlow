@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+//An TriggerThreshold represents throttling parameters
 type TriggerThreshold struct {
 	timer               *time.Timer
 	currentTriggerCount int32
@@ -13,10 +14,12 @@ type TriggerThreshold struct {
 	Setting             common.SettingConfig
 }
 
+//NewTriggerThreshold create a new event throttling policy
 func NewTriggerThreshold(setting common.SettingConfig) *TriggerThreshold {
 	return &TriggerThreshold{Setting: setting}
 }
 
+//Throttling decides whether to fire action or not
 func (plugin *TriggerThreshold) Throttling() bool {
 
 	if plugin.timer == nil {
