@@ -131,9 +131,7 @@ func loadConfig() {
 
 			pipelineActionMap[triggerPlugin] = append(pipelineActionMap[triggerPlugin], actionPlugin)
 		}
-	}
 
-	for triggerPlugin := range pipelineActionMap {
 		go triggerPlugin.Start()
 	}
 }
