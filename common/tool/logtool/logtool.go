@@ -82,22 +82,27 @@ func init() {
 	createLogWriterRoutine()
 }
 
+//Debug write debug log
 func Debug(step, mode, message string) {
 	writeLogData(tagDebug, step, mode, message)
 }
 
+//Info write info log
 func Info(step, mode, message string) {
 	writeLogData(tagInfo, step, mode, message)
 }
 
+//Warn write warning log
 func Warn(step, mode, message string) {
 	writeLogData(tagWarn, step, mode, message)
 }
 
+//Error write error log
 func Error(step, mode, message string) {
 	writeLogData(tagError, step, mode, message)
 }
 
+//Fatal write fatal log
 func Fatal(step, mode, message string) {
 	writeLogData(tagFatal, step, mode, message)
 }
