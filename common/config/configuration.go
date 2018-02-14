@@ -20,6 +20,7 @@ type configuration struct {
 	} `yaml:"log"`
 }
 
+//Config represents a global configuration
 var Config configuration
 
 func init() {
