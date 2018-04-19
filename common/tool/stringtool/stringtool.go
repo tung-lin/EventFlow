@@ -37,3 +37,9 @@ func CreateRandomStringWithLen(strlen int) string {
 
 	return string(result)
 }
+
+//Equal reports whether s and t are equal
+func Equal(s, t string, caseSensitive bool) bool {
+
+	return s == t
+}

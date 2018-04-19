@@ -6,11 +6,11 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -25,6 +25,17 @@ type swaggerConfig struct {
 		Description string   `json:"description"`
 		OperationID string   `json:"operationId"`
 		Deprecated  bool     `json:"deprecated"`
+		Parameters  []struct {
+			Name        string `json:"name"`
+			In          string `json:"in"`
+			Description string `json:"description"`
+			Required    bool   `json:"required"`
+			Type        string `json:"type"`
+			Enum        []struct {
+				Text  string
+				Value interface{}
+			} `json:"enum"`
+		} `json:"parameters"`
 	} `json:"paths"`
 }
 
@@ -44,20 +55,19 @@ type monitorResult struct {
 
 var resultChannel chan monitorResult
 
-func init() {
-	resultChannel = make(chan monitorResult, 20)
-	createMonitorResultWriterRoutine()
-}
-
 func (trigger *SwaggerStatusPlugin) Start() {
 
 	if trigger.Setting.SwaggerURL == "" {
 		return
 	}
 
+	resultChannel = make(chan monitorResult, 20)
+	createMonitorResultWriterRoutine()
+
+	trigger.operations = make(map[string]operation)
+
 	go func() {
 		trigger.swaggerParsing()
-
 	}()
 }
 
@@ -67,23 +77,42 @@ func (trigger *SwaggerStatusPlugin) Stop() {
 
 func (trigger *SwaggerStatusPlugin) swaggerParsing() {
 
-	response, err := http.Get(trigger.Setting.SwaggerURL)
+	currentePath, _ := os.Getwd()
+	swaggerFilePath := fmt.Sprintf("%s/%s", currentePath, trigger.Setting.SwaggerFile)
 
-	if err != nil {
-		log.Printf("[trigger][swagger] Download swagger json failed: %v", err)
-		return
+	var swaggerJSONContents []byte
+
+	if _, err := os.Stat(swaggerFilePath); err == nil {
+		jsonContent, err := ioutil.ReadFile(swaggerFilePath)
+
+		if err != nil {
+			fmt.Printf("[trigger][swagger] Read swagger file failed: %v", err)
+			return
+		}
+
+		swaggerJSONContents = jsonContent
+
+	} else {
+		response, err := http.Get(trigger.Setting.SwaggerURL)
+
+		if err != nil {
+			log.Printf("[trigger][swagger] Download swagger json failed: %v", err)
+			return
+		}
+
+		defer response.Body.Close()
+
+		jsonContent, err := ioutil.ReadAll(response.Body)
+
+		if err != nil {
+			fmt.Printf("[trigger][swagger] Read http response body failed: %v", err)
+			return
+		}
+
+		swaggerJSONContents = jsonContent
 	}
 
-	defer response.Body.Close()
-
-	swaggerJSONContents, err := ioutil.ReadAll(response.Body)
-
-	if err != nil {
-		fmt.Printf("[trigger][swagger] Read http response body failed: %v", err)
-		return
-	}
-
-	err = json.Unmarshal(swaggerJSONContents, &trigger.swaggerConfig)
+	err := json.Unmarshal(swaggerJSONContents, &trigger.swaggerConfig)
 
 	if err != nil {
 		log.Printf("[trigger][swagger] Unmarshal swagger json failed: %v", err)
@@ -96,12 +125,16 @@ func (trigger *SwaggerStatusPlugin) swaggerParsing() {
 			continue
 		}
 
-		if operation.MonitorIntervalSec == 0 || operation.MonitorIntervalSec < 20 {
-			operation.MonitorIntervalSec = trigger.Setting.MonitorIntervalSec
+		if operation.MonitorIntervalSec < 20 {
+			operation.MonitorIntervalSec = 20
 		}
 
-		if operation.MonitorTimeoutSec == 0 {
-			operation.MonitorTimeoutSec = trigger.Setting.MonitorTimeoutSec
+		if operation.MonitorTimeoutSec <= 0 {
+			operation.MonitorTimeoutSec = 10
+		}
+
+		if operation.MonitorTimeoutSec > operation.MonitorIntervalSec {
+			operation.MonitorTimeoutSec = operation.MonitorIntervalSec - 1
 		}
 
 		if operation.ODataTop > 20 {
@@ -132,7 +165,7 @@ func (trigger *SwaggerStatusPlugin) apiParsing() {
 		for method, methodDetail := range pathDetail {
 
 			//skip http method other than http GET
-			if strings.EqualFold(method, "GET") {
+			if method == "GET" {
 				continue
 			}
 
@@ -141,27 +174,66 @@ func (trigger *SwaggerStatusPlugin) apiParsing() {
 				continue
 			}
 
-			apiURL := url.URL{
-				Host:   trigger.swaggerConfig.Host,
-				Path:   trigger.swaggerConfig.BasePath + path,
-				Scheme: scheme,
+			hasParameterInPath := false
+			supportOData_Top := false
+			supportOData_Format := false
+
+			for _, parameter := range methodDetail.Parameters {
+				if parameter.In == "path" {
+					hasParameterInPath = true
+				} else if parameter.In == "query" {
+					if parameter.Name == "$top" {
+						supportOData_Top = true
+					} else if parameter.Name == "$format" {
+						supportOData_Format = true
+					}
+				}
 			}
 
-			trigger.createAPIMonitor(method, apiURL.String(), methodDetail.OperationID)
+			operation, existed := trigger.operations[methodDetail.OperationID]
+
+			if hasParameterInPath {
+				if !existed {
+					continue
+				}
+
+				for _, parameter := range operation.Parameters {
+
+					pathReplacedWithParameter := path
+
+					for _, pair := range parameter.Values {
+						pathReplacedWithParameter = strings.Replace(pathReplacedWithParameter, fmt.Sprintf("{%s}", pair.Name), pair.value.(string), -1)
+					}
+
+					apiURL := url.URL{
+						Host:   trigger.swaggerConfig.Host,
+						Path:   trigger.swaggerConfig.BasePath + pathReplacedWithParameter,
+						Scheme: scheme,
+					}
+
+					trigger.createAPIMonitor(apiURL.String(), operation)
+				}
+			} else {
+				apiURL := url.URL{
+					Host:   trigger.swaggerConfig.Host,
+					Path:   trigger.swaggerConfig.BasePath + path,
+					Scheme: scheme,
+				}
+
+				trigger.createAPIMonitor(apiURL.String(), operation)
+			}
 		}
 	}
 }
 
-func (trigger *SwaggerStatusPlugin) createAPIMonitor(method, apiURL, operationID string) {
+func (trigger *SwaggerStatusPlugin) createAPIMonitor(apiURL string, operation operation) {
 
 	var odataParameters []string
 	var odatatop int
 	var odataformat string
-	var specialOperation operation
 	var acceptFormat string
 
-	if operation, existed := trigger.operations[operationID]; existed {
-		specialOperation = operation
+	if &operation != nil {
 		odatatop = operation.ODataTop
 		odataformat = operation.ODataFormat
 	} else {
@@ -183,59 +255,66 @@ func (trigger *SwaggerStatusPlugin) createAPIMonitor(method, apiURL, operationID
 		apiURL = fmt.Sprintf("%s?%s", apiURL, strings.Join(odataParameters, "&"))
 	}
 
-	if &specialOperation != nil {
-		trigger.createSpecialAPIMonitorRoutine(method, acceptFormat, apiURL, specialOperation)
+	trigger.createAPIMonitorTimer(acceptFormat, apiURL, operation)
+}
+
+func (trigger *SwaggerStatusPlugin) createAPIMonitorTimer(acceptFormat, apiURL string, operation operation) {
+
+	var interval int
+	var timeout int
+
+	if &operation != nil {
+		interval = operation.MonitorIntervalSec
+		timeout = operation.MonitorTimeoutSec
 	} else {
-		trigger.createNormalAPIMonitorRoutine(method, acceptFormat, apiURL)
+		interval = trigger.Setting.MonitorIntervalSec
+		timeout = trigger.Setting.MonitorTimeoutSec
 	}
+
+	time.AfterFunc(time.Second*time.Duration(interval), func() {
+
+		result := getHTTPResponse(timeout, acceptFormat, apiURL)
+
+		msg := fmt.Sprintf("url: %s\r\nresponse code: %d\r\nmessage: %s\r\n", apiURL, result.responseCode, result.responseMessage)
+
+		if result.responseCode != 200 || (result.responseCode == 200 && trigger.Setting.NotifyHTTPOK) {
+			var triggerPlugin pluginbase.ITriggerPlugin = trigger
+			trigger.FireAction(&triggerPlugin, &msg)
+		}
+	})
 }
 
-func (trigger *SwaggerStatusPlugin) createNormalAPIMonitorRoutine(method, acceptFormat, apiURL string) {
-	go func() {
-		time.AfterFunc(time.Second*time.Duration(trigger.Setting.MonitorIntervalSec), func() {
+func getHTTPResponse(monitorTimeoutSec int, acceptFormat, apiURL string) (result monitorResult) {
+	var client = &http.Client{
+		Timeout: time.Second * time.Duration(monitorTimeoutSec),
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
 
-			response, _ := getHTTPResponse(trigger.Setting.MonitorTimeoutSec, acceptFormat, apiURL)
+	var response *http.Response
 
-			result := monitorResult{
-				method:          method,
-				url:             apiURL,
-				responseCode:    response.StatusCode,
-				responseMessage: getErrorResponseContent(response.Body),
-			}
+	if acceptFormat != "" {
+		request, _ := http.NewRequest("GET", apiURL, nil)
+		request.Header.Set("Accept", acceptFormat)
+		response, _ = client.Do(request)
+	} else {
+		response, _ = client.Get(apiURL)
+	}
 
-			resultChannel <- result
+	bodyBytes, _ := ioutil.ReadAll(response.Body)
+	bodyMessage := string(bodyBytes)
 
-			if response.StatusCode != 200 {
+	result = monitorResult{
+		method:          "GET",
+		url:             apiURL,
+		responseCode:    response.StatusCode,
+		responseMessage: bodyMessage,
+	}
 
-				msg := fmt.Sprintf("url: %s\r\nresponse code: %d\r\nmessage: %s\r\n", apiURL, response.StatusCode, result.responseMessage)
+	resultChannel <- result
 
-				var triggerPlugin pluginbase.ITriggerPlugin = trigger
-				trigger.FireAction(&triggerPlugin, &msg)
-			} else {
-
-			}
-		})
-	}()
-}
-
-func (trigger *SwaggerStatusPlugin) createSpecialAPIMonitorRoutine(method, acceptFormat, apiURL string, operation operation) {
-	go func() {
-
-		time.AfterFunc(time.Second*time.Duration(operation.MonitorIntervalSec), func() {
-
-			response, _ := getHTTPResponse(operation.MonitorTimeoutSec, acceptFormat, apiURL)
-
-			result := monitorResult{
-				method:          method,
-				url:             apiURL,
-				responseCode:    response.StatusCode,
-				responseMessage: getErrorResponseContent(response.Body),
-			}
-
-			resultChannel <- result
-
-		})
-	}()
+	return
 }
 
 func createMonitorResultWriterRoutine() {
@@ -248,30 +327,4 @@ func createMonitorResultWriterRoutine() {
 			}
 		}
 	}()
-}
-
-func getHTTPResponse(monitorTimeoutSec int, method, acceptFormat, apiURL string) (response *http.Response, err error) {
-	var client = &http.Client{
-		Timeout: time.Second * time.Duration(monitorTimeoutSec),
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-
-	if acceptFormat != "" {
-		request, _ := http.NewRequest("GET", apiURL, nil)
-		request.Header.Set("Accept", acceptFormat)
-		response, err = client.Do(request)
-	} else {
-		response, err = client.Get(apiURL)
-	}
-
-	return
-}
-
-func getErrorResponseContent(body io.ReadCloser) string {
-	bodyBytes, _ := ioutil.ReadAll(body)
-	bodyString := string(bodyBytes)
-
-	return bodyString
 }
