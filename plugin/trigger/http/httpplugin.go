@@ -58,7 +58,7 @@ func (trigger *HttpPlugin) Stop() {
 		defer cancel()
 
 		if err := trigger.currentServer.Shutdown(ctx); err != nil {
-			logtool.Error("trigger", "http", fmt.Sprintf("http listener shutdown failed: %v", err))
+			logtool.Error("trigger", "http", fmt.Sprintf("http listener shutdown '%s' failed: %v", trigger.currentServer.Addr, err))
 		}
 	}
 }

@@ -19,6 +19,19 @@ filter:
       actioncount: 2
       periodsecond: 10
       key: "%{throttlekey}"
+  -
+    mode: mysql
+    setting:
+      ip: 192.168.8.142
+      user: 
+      password: 
+      database: isurveillance.authority
+      command: "select URI from usercontact where FK_User = '%{providerid}'"
+      addmetadata:
+        emailaddress: "[URI]"
+      cache:
+        cachekey: "%{providerid}"
+        timeoutsecond: 20
 
 action:
   - 
@@ -27,9 +40,10 @@ action:
       address: smtp.gmail.com
       port: 587
       username: pplovable@gmail.com
-      password: daulogr2
+      password: 
       from: pplovable@gmail.com
       staticto: [tl.yu@iisigroup.com]
+      dynamicto: "%{emailaddress}"
       subject: "test %{emailsubject}"
       body: "test %{emailbody}"
   -

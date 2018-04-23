@@ -5,8 +5,9 @@ import (
 	"EventFlow/common/tool/logtool"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -28,7 +29,8 @@ type eventFlow struct {
 	} `yaml:"action"`
 }
 
-var ch chan bool
+var ch chan os.Signal
+var runForever bool
 
 var triggerFactoryMap map[string]pluginbase.ITriggerFactory
 var actionFactoryMap map[string]pluginbase.IActionFactory
@@ -46,13 +48,37 @@ func init() {
 	pipelineFilterMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IFilterPlugin)
 	pipelineActionMap = make(map[pluginbase.ITriggerPlugin][]pluginbase.IActionPlugin)
 
+	runForever = false
 	loadConfig()
 }
 
 func main() {
 
-	<-ch
-	log.Print("exist")
+	exitFunc := func() {
+		logtool.Debug("main", "main", " exit program")
+		os.Exit(0)
+	}
+
+	if runForever {
+		ch = make(chan os.Signal)
+		signal.Notify(ch, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
+		go func() {
+			signal := <-ch
+			logtool.Debug("main", "main", fmt.Sprintf("caught signal: %+v", signal))
+
+			for triggerPlugin := range pipelineFilterMap {
+				triggerPlugin.Stop()
+			}
+
+			exitFunc()
+		}()
+
+		select {}
+
+	} else {
+		exitFunc()
+	}
 }
 
 func loadConfig() {
@@ -62,15 +88,22 @@ func loadConfig() {
 	files, err := ioutil.ReadDir(pipelineConfigPath)
 
 	if err != nil {
-		log.Print(err)
+		logtool.Error("main", "main", fmt.Sprintf("read pipeline config directory failed: %v", err))
 		return
 	}
 
 	for _, file := range files {
+
+		if file.IsDir() {
+			continue
+		}
+
+		logtool.Debug("main", "main", fmt.Sprintf("read pipeline config file: %s", file.Name()))
+
 		pipelineFile, err := ioutil.ReadFile(pipelineConfigPath + file.Name())
 
 		if err != nil {
-			logtool.Fatal("main", "main", fmt.Sprintf("read pipeline config file failed: %v", err))
+			logtool.Error("main", "main", fmt.Sprintf("read pipeline config file failed: %v", err))
 			continue
 		}
 
@@ -134,6 +167,8 @@ func loadConfig() {
 
 		go triggerPlugin.Start()
 	}
+
+	runForever = true
 }
 
 func actionHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, messageFromTrigger *string) {
@@ -151,7 +186,7 @@ func actionHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, messageFromTrigg
 
 		//log.Printf("took %s", time.Since(start))
 
-		log.Printf("fire action...")
+		//log.Printf("fire action...")
 
 		for _, actionPlugin := range pipelineActionMap[*triggerPlugin] {
 			go actionPlugin.FireAction(messageFromTrigger, &parameters)

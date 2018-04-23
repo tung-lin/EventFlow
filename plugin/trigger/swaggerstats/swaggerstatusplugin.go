@@ -175,17 +175,17 @@ func (trigger *SwaggerStatusPlugin) apiParsing() {
 			}
 
 			hasParameterInPath := false
-			supportOData_Top := false
-			supportOData_Format := false
+			//supportOData_Top := false
+			//supportOData_Format := false
 
 			for _, parameter := range methodDetail.Parameters {
 				if parameter.In == "path" {
 					hasParameterInPath = true
 				} else if parameter.In == "query" {
 					if parameter.Name == "$top" {
-						supportOData_Top = true
+						//supportOData_Top = true
 					} else if parameter.Name == "$format" {
-						supportOData_Format = true
+						//supportOData_Format = true
 					}
 				}
 			}
