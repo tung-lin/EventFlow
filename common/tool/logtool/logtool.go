@@ -208,9 +208,9 @@ func createLogWriterRoutine() {
 			var logMsg string
 
 			if config.Config.Log.IncludeCaller && (logData.Level == tagError || logData.Level == tagFatal) {
-				logMsg = fmt.Sprintf("[%s] [%s][%s] [%s] %s\r\n", logData.Level, logData.Step, logData.Mode, logData.ErrorLine, logData.Message)
+				logMsg = fmt.Sprintf("[%5s] [%7s][%s] [%s] %s\r\n", logData.Level, logData.Step, logData.Mode, logData.ErrorLine, logData.Message)
 			} else {
-				logMsg = fmt.Sprintf("[%s] [%s][%s] %s\r\n", logData.Level, logData.Step, logData.Mode, logData.Message)
+				logMsg = fmt.Sprintf("[%5s] [%7s][%s] %s\r\n", logData.Level, logData.Step, logData.Mode, logData.Message)
 			}
 
 			if err := log.Output(0, logMsg); err != nil {

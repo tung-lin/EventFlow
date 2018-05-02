@@ -1,5 +1,5 @@
 trigger: 
-  mode: http
+  mode: udp
   setting:
     port: 8088
 
