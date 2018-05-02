@@ -28,4 +28,4 @@ dockerpush:
 	docker push $(DOCKERIMAGE)
 
 dockerrun:
-	docker run --rm -it -p 8888:8888 $(DOCKERIMAGE)
+	docker run --rm -it -p 8088:8088 -p 8088:8088/udp $(DOCKERIMAGE)
