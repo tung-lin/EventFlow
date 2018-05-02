@@ -116,12 +116,14 @@ func loadConfig() {
 		}
 
 		if config.Trigger.Mode == "" {
+			logtool.Info("main", "main", fmt.Sprintf("trigger mode is undefined in file %s", file.Name()))
 			continue
 		}
 
 		triggerFactory, existed := triggerFactoryMap[config.Trigger.Mode]
 
 		if !existed {
+			logtool.Info("main", "main", fmt.Sprintf("trigger mode %s not found", config.Trigger.Mode))
 			continue
 		}
 
