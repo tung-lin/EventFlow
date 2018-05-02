@@ -24,7 +24,6 @@ func (trigger *UDPPlugin) Start() {
 	}
 
 	connection, err := net.ListenUDP("udp", udpAddress)
-	defer connection.Close()
 
 	if err != nil {
 		logtool.Error("trigger", "udp", fmt.Sprintf("listen udp endpoint(%s) failed : %v", udpAddress.String(), err))
@@ -46,7 +45,7 @@ func readFromUDP(trigger *UDPPlugin) {
 
 		if err != nil {
 			logtool.Error("trigger", "udp", fmt.Sprintf("read message from udp(remote address: %s) failed : %v", remoteAddress.String(), err))
-			continue
+			break
 		}
 
 		message := string(receiveBuffer[:received])
