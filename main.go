@@ -55,7 +55,7 @@ func init() {
 func main() {
 
 	exitFunc := func() {
-		logtool.Debug("main", "main", " exit program")
+		logtool.Debug("main", "main", "exit program")
 		os.Exit(0)
 	}
 
