@@ -9,6 +9,7 @@ import (
 	"EventFlow/plugin/filter/throttle"
 	"EventFlow/plugin/trigger/http"
 	"EventFlow/plugin/trigger/swaggerstats"
+	"EventFlow/plugin/trigger/udp"
 )
 
 type pluginImportLoader struct {
@@ -20,7 +21,7 @@ func (loader pluginImportLoader) Load() (triggerFactories map[string]pluginbase.
 	var triggerFactoryMap = make(map[string]pluginbase.ITriggerFactory)
 	triggers := []pluginbase.ITriggerFactory{}
 
-	triggers = append(triggers, swaggerstats.SwaggerStatsFactory{}, http.HttpFactory{})
+	triggers = append(triggers, swaggerstats.SwaggerStatsFactory{}, http.HttpFactory{}, udp.UdpFactory{})
 
 	for _, trigger := range triggers {
 		triggerFactoryMap[trigger.GetIdentifyName()] = trigger
