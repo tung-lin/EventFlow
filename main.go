@@ -13,7 +13,7 @@ import (
 )
 
 type eventFlow struct {
-	Trigger struct {
+	Trigger []struct {
 		Mode    string      `yaml:"mode"`
 		Setting interface{} `yaml:"setting"`
 	} `yaml:"trigger"`
@@ -115,25 +115,8 @@ func loadConfig() {
 			continue
 		}
 
-		if config.Trigger.Mode == "" {
-			logtool.Info("main", "main", fmt.Sprintf("trigger mode is undefined in file %s", file.Name()))
-			continue
-		}
-
-		triggerFactory, existed := triggerFactoryMap[config.Trigger.Mode]
-
-		if !existed {
-			logtool.Info("main", "main", fmt.Sprintf("trigger mode %s not found", config.Trigger.Mode))
-			continue
-		}
-
-		triggerPlugin := triggerFactory.CreateTrigger(config.Trigger.Setting)
-
-		if triggerPlugin == nil {
-			continue
-		}
-
-		triggerPlugin.ActionHandleFunc(actionHandleFunc)
+		filters := []pluginbase.IFilterPlugin{}
+		actions := []pluginbase.IActionPlugin{}
 
 		for _, filter := range config.Filter {
 			filterFactory, existed := filterFactoryMap[filter.Mode]
@@ -148,7 +131,7 @@ func loadConfig() {
 				continue
 			}
 
-			pipelineFilterMap[triggerPlugin] = append(pipelineFilterMap[triggerPlugin], filterPlugin)
+			filters = append(filters, filterPlugin)
 		}
 
 		for _, action := range config.Action {
@@ -164,10 +147,38 @@ func loadConfig() {
 				continue
 			}
 
-			pipelineActionMap[triggerPlugin] = append(pipelineActionMap[triggerPlugin], actionPlugin)
+			actions = append(actions, actionPlugin)
 		}
 
-		go triggerPlugin.Start()
+		for _, trigger := range config.Trigger {
+
+			if trigger.Mode == "" {
+				logtool.Info("main", "main", fmt.Sprintf("trigger mode is undefined in file %s", file.Name()))
+				continue
+			}
+
+			triggerFactory, existed := triggerFactoryMap[trigger.Mode]
+
+			if !existed {
+				logtool.Info("main", "main", fmt.Sprintf("trigger mode %s not found", trigger.Mode))
+				continue
+			}
+
+			triggerPlugin := triggerFactory.CreateTrigger(trigger.Setting)
+
+			if triggerPlugin == nil {
+				continue
+			}
+
+			triggerPlugin.ActionHandleFunc(actionHandleFunc)
+
+			println(&filters)
+
+			pipelineFilterMap[triggerPlugin] = filters
+			pipelineActionMap[triggerPlugin] = actions
+
+			go triggerPlugin.Start()
+		}
 	}
 
 	runForever = true
@@ -181,14 +192,14 @@ func actionHandleFunc(triggerPlugin *pluginbase.ITriggerPlugin, messageFromTrigg
 		//start := time.Now()
 
 		for _, filterPlugin := range pipelineFilterMap[*triggerPlugin] {
+
+			println(filterPlugin)
 			if doNextPipeline := filterPlugin.DoFilter(messageFromTrigger, &parameters); !doNextPipeline {
 				return
 			}
 		}
 
 		//log.Printf("took %s", time.Since(start))
-
-		//log.Printf("fire action...")
 
 		for _, actionPlugin := range pipelineActionMap[*triggerPlugin] {
 			go actionPlugin.FireAction(messageFromTrigger, &parameters)

@@ -1,7 +1,12 @@
 trigger: 
-  mode: udp
-  setting:
-    port: 8088
+  -
+    mode: udp
+    setting:
+      port: 8088
+  -
+    mode: http
+    setting:
+      port: 8088
 
 filter:
   -
