@@ -41,7 +41,7 @@ action:
       address: smtp.gmail.com
       port: 587
       username: pplovable@gmail.com
-      password: daulogr2
+      password: 
       from: pplovable@gmail.com
       staticto: [tl.yu@iisigroup.com]
       subject: "PTX ETL Notification - %{transtype} - %{datatarget} - %{datatype}"
