@@ -13,10 +13,19 @@ filter:
     mode: json
     setting:
       addmetadata: 
-        throttlekey: "[id]"   
-        providerid: "[providerid]" 
-        emailsubject: "[email][subject]"
-        emailbody: "[email][body]"
+        throttlekey: "[ID]"
+        level: "[Data][Level]"
+        timestamp: "[Data][Timestamp]"
+        step: "[Data][JobStep]"
+        transtype: "[Data][LogType]"
+        datatype: "[Data][DataType]"
+        datatarget: "[Data][Target]"        
+        provider: "[Data][Provider]"
+        authority: "[Data][Authority]"
+        operation: "[Data][Operation]"
+        operationresult: "[Data][Status]"
+        message: "[Data][Message]"
+        detail: "[Data][ExceptionStackTrace]"
   -
     mode: throttle
     setting:
@@ -35,10 +44,36 @@ action:
       password: daulogr2
       from: pplovable@gmail.com
       staticto: [tl.yu@iisigroup.com]
-      subject: "test %{emailsubject}"
-      body: "test %{emailbody}"
+      subject: "PTX ETL Notification - %{transtype} - %{datatarget} - %{datatype}"
+      body: " \r\n 時間:%{timestamp}\r\n
+              等級:%{level}\r\n\r\n
+              ==========ETL==========\r\n
+              步驟:%{step}\r\n
+              執行動作:%{operation}\r\n
+              執行動作結果:%{operationresult}\r\n\r\n
+              ==========Data==========\r\n
+              運具:%{transtype}\r\n
+              種類:%{datatarget}\r\n
+              性質:%{datatype}\r\n
+              提供者:%{provider}\r\n
+              業管機關:%{authority}\r\n\r\n
+              ==========Debug==========\r\n
+              訊息:%{message}\r\n
+              詳細訊息:%{detail}\r\n"
   -
     mode: line
     setting:
-      accesstoken: 2mJC8j7b1fdb6VnUISau31gsJdQWsjeoJ5mV48tnBoZ
-      message: "test line %{emailbody}"
+      #accesstoken: 2mJC8j7b1fdb6VnUISau31gsJdQWsjeoJ5mV48tnBoZ  #test
+      accesstoken: hqtY0bXbrDgLh7jNmPCjvrr6EdBvh8hkz0udJLbGFWl   #ptx
+      message: "\r\n 時間:%{timestamp}\r\n
+                等級:%{level}\r\n\r\n
+                ==========ETL==========\r\n
+                步驟:%{step}\r\n
+                執行動作:%{operation}\r\n
+                執行動作結果:%{operationresult}\r\n\r\n
+                ==========Data==========\r\n
+                運具:%{transtype}\r\n
+                種類:%{datatarget}\r\n
+                性質:%{datatype}\r\n
+                提供者:%{provider}\r\n
+                業管機關:%{authority}\r\n\r\n"

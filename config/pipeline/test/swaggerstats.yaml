@@ -2,7 +2,7 @@ trigger:
   mode: swaggerstats
   setting: 
     swagger_file: "swagger.json"
-    swagger_url: https://ptx.transportdata.tw/motc/api/main/docs/v2
+    swagger_url: https://ptx.transportdata.tw/MOTC/API/Main/docs/v2
     api_ip: https://ptx.transportdata.tw
     api_path: MOTC/
     odata_top: 2
