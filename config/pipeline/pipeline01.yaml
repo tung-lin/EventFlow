@@ -63,8 +63,8 @@ action:
   -
     mode: line
     setting:
-      #accesstoken: 2mJC8j7b1fdb6VnUISau31gsJdQWsjeoJ5mV48tnBoZ  #test
-      accesstoken: hqtY0bXbrDgLh7jNmPCjvrr6EdBvh8hkz0udJLbGFWl   #ptx
+      accesstoken: 2mJC8j7b1fdb6VnUISau31gsJdQWsjeoJ5mV48tnBoZ  #test
+      #accesstoken: hqtY0bXbrDgLh7jNmPCjvrr6EdBvh8hkz0udJLbGFWl   #ptx
       message: "\r\n 時間:%{timestamp}\r\n
                 等級:%{level}\r\n\r\n
                 ==========ETL==========\r\n
