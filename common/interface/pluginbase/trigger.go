@@ -15,23 +15,25 @@ type ITriggerPlugin interface {
 
 //IActionHandler interface for action handler
 type IActionHandler interface {
-	ActionHandleFunc(f func(triggerPlugin *ITriggerPlugin, messageFromTrigger *string))
+	ActionHandleFunc(pipelineID string, f func(pipelineID string, triggerPlugin *ITriggerPlugin, messageFromTrigger *string))
 	FireAction(triggerPlugin *ITriggerPlugin, messageFromTrigger *string)
 }
 
 //ActionHandler struct for action handler
 type ActionHandler struct {
-	actionHandleFunc func(triggerPlugin *ITriggerPlugin, messageFromTrigger *string)
+	pipelineID       string
+	actionHandleFunc func(pipelineID string, triggerPlugin *ITriggerPlugin, messageFromTrigger *string)
 }
 
 //ActionHandleFunc add handler function
-func (h *ActionHandler) ActionHandleFunc(f func(triggerPlugin *ITriggerPlugin, messageFromTrigger *string)) {
+func (h *ActionHandler) ActionHandleFunc(pipelineID string, f func(pipelineID string, triggerPlugin *ITriggerPlugin, messageFromTrigger *string)) {
+	h.pipelineID = pipelineID
 	h.actionHandleFunc = f
 }
 
 //FireAction fire action
 func (h *ActionHandler) FireAction(triggerPlugin *ITriggerPlugin, messageFromTrigger *string) {
 	if h.actionHandleFunc != nil {
-		h.actionHandleFunc(triggerPlugin, messageFromTrigger)
+		h.actionHandleFunc(h.pipelineID, triggerPlugin, messageFromTrigger)
 	}
 }
