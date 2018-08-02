@@ -55,8 +55,10 @@ func (filter *LinePlugin) FireAction(messageFromTrigger *string, parameters *map
 		return
 	}
 
+	accessToken := parametertool.ReplaceWithParameter(&filter.Setting.AccessToken, parameters)
+
 	request.Header.Set("Content-Type", lineNotifyContentType)
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", filter.Setting.AccessToken))
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	client := http.DefaultClient
 	response, err := client.Do(request)
