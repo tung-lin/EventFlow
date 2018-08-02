@@ -43,3 +43,24 @@ func Equal(s, t string, caseSensitive bool) bool {
 
 	return s == t
 }
+
+//ToStringArray convert interface(string or string array) to string array
+func ToStringArray(data interface{}) []string {
+
+	if value, ok := data.(string); ok {
+		return []string{value}
+	} else if value, ok := data.([]interface{}); ok {
+
+		var results []string
+
+		for _, v := range value {
+			if stringValue, ok := v.(string); ok {
+				results = append(results, stringValue)
+			}
+		}
+
+		return results
+	}
+
+	return nil
+}
