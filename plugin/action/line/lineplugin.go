@@ -43,46 +43,45 @@ type rateLimit struct {
 func (filter *LinePlugin) FireAction(messageFromTrigger *string, parameters *map[string]interface{}) {
 
 	message := parametertool.ReplaceWithParameter(&filter.Setting.Message, parameters)
+	accessTokens := parametertool.ReplaceWithParameter(&filter.Setting.AccessToken, parameters)
 
 	values := url.Values{}
 	values.Add("message", message)
 
 	body := strings.NewReader(values.Encode())
-	request, err := http.NewRequest(lineNotifyMethod, lineNotifyURL, body)
 
-	if err != nil {
-		logtool.Error("action", "line", fmt.Sprintf("create http request failed: %v", err))
-		return
-	}
+	for _, accessToken := range strings.Split(accessTokens, ",") {
 
-	accessToken := parametertool.ReplaceWithParameter(&filter.Setting.AccessToken, parameters)
+		go func(token string) {
+			request, err := http.NewRequest(lineNotifyMethod, lineNotifyURL, body)
+			request.Header.Set("Content-Type", lineNotifyContentType)
+			request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
-	request.Header.Set("Content-Type", lineNotifyContentType)
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+			client := http.DefaultClient
+			response, err := client.Do(request)
 
-	client := http.DefaultClient
-	response, err := client.Do(request)
+			if err != nil {
+				logtool.Error("action", "line", fmt.Sprintf("send http request failed: %v", err))
+				return
+			}
 
-	if err != nil {
-		logtool.Error("action", "line", fmt.Sprintf("send http request failed: %v", err))
-		return
-	}
+			defer response.Body.Close()
 
-	defer response.Body.Close()
+			notifyResponse := notifyResponse{}
+			err = json.NewDecoder(response.Body).Decode(&notifyResponse)
 
-	notifyResponse := notifyResponse{}
-	err = json.NewDecoder(response.Body).Decode(&notifyResponse)
+			if err != nil {
+				logtool.Error("action", "line", fmt.Sprintf("decode http response body failed: %v", err))
+				return
+			}
 
-	if err != nil {
-		logtool.Error("action", "line", fmt.Sprintf("decode http response body failed: %v", err))
-		return
-	}
+			logtool.Debug("action", "line", fmt.Sprintf("http response message: %s, status: %d", notifyResponse.Message, notifyResponse.Status))
 
-	logtool.Debug("action", "line", fmt.Sprintf("http response message: %s, status: %d", notifyResponse.Message, notifyResponse.Status))
-
-	if response.StatusCode == http.StatusOK {
-		rateLimit := parseRateLimit(response.Header)
-		logtool.Debug("action", "line", fmt.Sprintf("limit: %d, remaining: %d, imagelimit: %d, imageremaining: %d, reset: %s", rateLimit.Limit, rateLimit.Remaining, rateLimit.ImageLimit, rateLimit.ImageRemaining, rateLimit.Reset.Format(time.RFC1123)))
+			if response.StatusCode == http.StatusOK {
+				rateLimit := parseRateLimit(response.Header)
+				logtool.Debug("action", "line", fmt.Sprintf("limit: %d, remaining: %d, imagelimit: %d, imageremaining: %d, reset: %s", rateLimit.Limit, rateLimit.Remaining, rateLimit.ImageLimit, rateLimit.ImageRemaining, rateLimit.Reset.Format(time.RFC1123)))
+			}
+		}(accessToken)
 	}
 }
 
