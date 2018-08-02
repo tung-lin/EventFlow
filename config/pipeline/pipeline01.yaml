@@ -1,10 +1,12 @@
 trigger: 
   -
     mode: udp
+    disable: true
     setting:
       port: 8088
   -
     mode: http
+    disable: true
     setting:
       port: 8088
 
