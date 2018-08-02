@@ -2,6 +2,7 @@ package email
 
 import (
 	"EventFlow/common/tool/parametertool"
+	"EventFlow/common/tool/stringtool"
 	"fmt"
 	"log"
 	"net/smtp"
@@ -20,7 +21,7 @@ func (trigger *EmailPlugin) FireAction(messageFromTrigger *string, parameters *m
 
 	dynamicto := parametertool.ReplaceWithParameter(&trigger.Setting.DynamicTo, parameters)
 
-	to := append(trigger.Setting.StaticTo, strings.Split(dynamicto, ",")...)
+	to := append(stringtool.ToStringArray(trigger.Setting.StaticTo), strings.Split(dynamicto, ",")...)
 	to = checkEmailAddress(&to)
 
 	subject := parametertool.ReplaceWithParameter(&trigger.Setting.Subject, parameters)
