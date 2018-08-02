@@ -16,6 +16,7 @@ import (
 type eventFlow struct {
 	Trigger []struct {
 		Mode    string      `yaml:"mode"`
+		Disable bool        `yaml:"disable"`
 		Setting interface{} `yaml:"setting"`
 	} `yaml:"trigger"`
 
@@ -108,13 +109,13 @@ func loadConfig() {
 			continue
 		}
 
-		logtool.Debug("main", "main", fmt.Sprintf("read pipeline config file: %s", file.Name()))
+		filename := file.Name()
 
 		//load pieline file
 		pipelineFile, err := ioutil.ReadFile(pipelineConfigPath + file.Name())
 
 		if err != nil {
-			logtool.Error("main", "main", fmt.Sprintf("read pipeline config file failed: %v", err))
+			logtool.Error("main", "main", fmt.Sprintf("read pipeline config file '%s 'failed: %v", filename, err))
 			continue
 		}
 
@@ -123,7 +124,7 @@ func loadConfig() {
 		err = yaml.Unmarshal(pipelineFile, &config)
 
 		if err != nil {
-			logtool.Fatal("main", "main", fmt.Sprintf("unmarshal pipeline config file failed: %v", err))
+			logtool.Fatal("main", "main", fmt.Sprintf("unmarshal pipeline config file '%s' failed: %v", filename, err))
 			continue
 		}
 
@@ -143,6 +144,8 @@ func loadConfig() {
 		}
 
 		pipelineMap[pipelineID] = &pipeline
+
+		logtool.Debug("main", "main", fmt.Sprintf("read pipeline config file '%s' (%d trigger(s), %d filter(s), %d action(s))", filename, len(config.Trigger), len(config.Filter), len(config.Action)))
 
 		//create filters
 		for _, filter := range config.Filter {
@@ -182,14 +185,19 @@ func loadConfig() {
 		for _, trigger := range config.Trigger {
 
 			if trigger.Mode == "" {
-				logtool.Info("main", "main", fmt.Sprintf("trigger mode is undefined in file %s", file.Name()))
+				logtool.Info("main", "main", fmt.Sprintf("trigger mode is undefined in file '%s'", filename))
+				continue
+			}
+
+			if trigger.Disable {
+				logtool.Info("main", "main", fmt.Sprintf("trigger mode '%s' in file '%s' is disabled", trigger.Mode, filename))
 				continue
 			}
 
 			triggerFactory, existed := triggerFactoryMap[trigger.Mode]
 
 			if !existed {
-				logtool.Info("main", "main", fmt.Sprintf("trigger mode %s not found", trigger.Mode))
+				logtool.Info("main", "main", fmt.Sprintf("trigger mode '%s' not found", trigger.Mode))
 				continue
 			}
 
