@@ -1,7 +1,8 @@
 trigger: 
-  mode: http
-  setting:
-    port: 8088
+  -
+    mode: http
+    setting:
+      port: 8088
 
 filter:
   -
@@ -23,7 +24,7 @@ filter:
     mode: mysql
     setting:
       ip: 192.168.8.142
-      user: 
+      user: admin
       password: 
       database: isurveillance.authority
       command: "select URI from usercontact where FK_User = '%{providerid}'"
@@ -42,7 +43,7 @@ action:
       username: pplovable@gmail.com
       password: 
       from: pplovable@gmail.com
-      staticto: [tl.yu@iisigroup.com]
+      staticto: tl.yu@iisigroup.com
       dynamicto: "%{emailaddress}"
       subject: "test %{emailsubject}"
       body: "test %{emailbody}"
