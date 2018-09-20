@@ -43,11 +43,12 @@ func (filter *MySQLPlugin) DoFilter(messageFromTrigger *string, parameters *map[
 	}
 
 	dbConfig := mysql.Config{
-		Net:    "tcp",
-		Addr:   filter.Setting.IP,
-		User:   filter.Setting.User,
-		Passwd: filter.Setting.Password,
-		DBName: filter.Setting.Database,
+		Net:                  "tcp",
+		Addr:                 filter.Setting.IP,
+		User:                 filter.Setting.User,
+		Passwd:               filter.Setting.Password,
+		DBName:               filter.Setting.Database,
+		AllowNativePasswords: true,
 	}
 
 	db, err := sql.Open("mysql", dbConfig.FormatDSN())
