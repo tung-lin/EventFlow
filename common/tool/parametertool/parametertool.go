@@ -4,6 +4,7 @@ import (
 	"EventFlow/common/tool/logtool"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -29,6 +30,12 @@ func ReplaceWithParameter(target *string, parameters *map[string]interface{}) (r
 
 		if value, ok := parmValue.(string); ok {
 			result = strings.Replace(result, matchItem, value, -1)
+		} else if value, ok := parmValue.(bool); ok {
+			newValue := strconv.FormatBool(value)
+			result = strings.Replace(result, matchItem, newValue, -1)
+		} else if value, ok := parmValue.(float64); ok {
+			newValue := strconv.FormatFloat(value, 'f', -1, 64)
+			result = strings.Replace(result, matchItem, newValue, -1)
 		} else if values, ok := parmValue.([]interface{}); ok {
 			results := make([]string, len(values))
 			for index, value := range values {
