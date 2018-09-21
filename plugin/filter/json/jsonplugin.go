@@ -40,7 +40,7 @@ func isJSONFormat(content string) (jsonContent map[string]*json.RawMessage, err 
 	return jsonContent, err
 }
 
-func getField(fieldPath string, jsonContent map[string]*json.RawMessage) (fieldValue string) {
+func getField(fieldPath string, jsonContent map[string]*json.RawMessage) (fieldValue interface{}) {
 
 	paths := strings.Split(fieldPath, "]")
 	paths = arraytool.RemoveItem("", paths)
@@ -67,15 +67,16 @@ func getField(fieldPath string, jsonContent map[string]*json.RawMessage) (fieldV
 
 		//is the last item in array
 		if index == len(paths)-1 {
-			var stringValue string
-			err := json.Unmarshal(*value, &stringValue)
+
+			var objectValue interface{}
+			err := json.Unmarshal(*value, &objectValue)
 
 			if err != nil {
 				log.Printf("%v", err)
 				break
 			}
 
-			return stringValue
+			return objectValue
 		}
 
 		err := json.Unmarshal(*value, &objectMap)
