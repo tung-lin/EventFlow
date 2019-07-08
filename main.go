@@ -3,6 +3,7 @@ package main
 import (
 	"EventFlow/common/interface/pluginbase"
 	"EventFlow/common/tool/logtool"
+	"EventFlow/common/tool/pipelinetool"
 	"EventFlow/common/tool/stringtool"
 	"fmt"
 	"io/ioutil"
@@ -14,35 +15,48 @@ import (
 )
 
 type eventFlow struct {
-	Trigger []struct {
-		Mode    string      `yaml:"mode"`
-		Disable bool        `yaml:"disable"`
-		Setting interface{} `yaml:"setting"`
-	} `yaml:"trigger"`
+	Trigger   []triggerConfig        `yaml:"trigger"`
+	Condition pipelinetool.Condition `yaml:"condition"`
+	Filter    []filterConfig         `yaml:"filter"`
+	Action    []actionConfig         `yaml:"action"`
+}
 
-	Filter []struct {
-		Mode    string      `yaml:"mode"`
-		Setting interface{} `yaml:"setting"`
-	} `yaml:"filter"`
+type triggerConfig struct {
+	Mode    string      `yaml:"mode"`
+	Disable bool        `yaml:"disable"`
+	Setting interface{} `yaml:"setting"`
+}
 
-	Action []struct {
-		Mode    string      `yaml:"mode"`
-		Setting interface{} `yaml:"setting"`
-	} `yaml:"action"`
+type filterConfig struct {
+	Mode      string                 `yaml:"mode"`
+	Disable   bool                   `yaml:"disable"`
+	Setting   interface{}            `yaml:"setting"`
+	Condition pipelinetool.Condition `yaml:"condition"`
+}
+
+type actionConfig struct {
+	Mode      string                 `yaml:"mode"`
+	Disable   bool                   `yaml:"disable"`
+	Setting   interface{}            `yaml:"setting"`
+	Condition pipelinetool.Condition `yaml:"condition"`
 }
 
 type pipeline struct {
 	PipelineID       string
 	PipelineFileName string
 	Trigger          []pluginbase.ITriggerPlugin
+	Condition        pluginbase.IConditionPlugin
 	Filter           []pluginbase.IFilterPlugin
+	FilterConfig     []filterConfig
 	Action           []pluginbase.IActionPlugin
+	ActionConfig     []actionConfig
 }
 
 var ch chan os.Signal
 var runForever bool
 
 var triggerFactoryMap map[string]pluginbase.ITriggerFactory
+var conditionFactory pluginbase.IConditionFactory
 var actionFactoryMap map[string]pluginbase.IActionFactory
 var filterFactoryMap map[string]pluginbase.IFilterFactory
 
@@ -52,7 +66,7 @@ func init() {
 	loader := pluginImportLoader{}
 	//loader := pluginSharedObjectLoader{}
 
-	triggerFactoryMap, filterFactoryMap, actionFactoryMap = loader.Load()
+	triggerFactoryMap, conditionFactory, filterFactoryMap, actionFactoryMap = loader.Load()
 
 	pipelineMap = make(map[string]*pipeline)
 
@@ -140,15 +154,28 @@ func loadConfig() {
 			PipelineFileName: file.Name(),
 			Trigger:          []pluginbase.ITriggerPlugin{},
 			Filter:           []pluginbase.IFilterPlugin{},
+			FilterConfig:     []filterConfig{},
 			Action:           []pluginbase.IActionPlugin{},
+			ActionConfig:     []actionConfig{},
 		}
 
 		pipelineMap[pipelineID] = &pipeline
 
 		logtool.Debug("main", "main", fmt.Sprintf("read pipeline config file '%s' (%d trigger(s), %d filter(s), %d action(s))", filename, len(config.Trigger), len(config.Filter), len(config.Action)))
 
+		//create condition
+		if conditionFactory != nil {
+			pipeline.Condition = conditionFactory.CreateCondition(config.Condition)
+		}
+
 		//create filters
 		for _, filter := range config.Filter {
+
+			if filter.Disable {
+				logtool.Info("main", "main", fmt.Sprintf("filter mode '%s' in file '%s' is disabled", filter.Mode, filename))
+				continue
+			}
+
 			filterFactory, existed := filterFactoryMap[filter.Mode]
 
 			if !existed {
@@ -162,10 +189,17 @@ func loadConfig() {
 			}
 
 			pipeline.Filter = append(pipeline.Filter, filterPlugin)
+			pipeline.FilterConfig = append(pipeline.FilterConfig, filter)
 		}
 
 		//create actions
 		for _, action := range config.Action {
+
+			if action.Disable {
+				logtool.Info("main", "main", fmt.Sprintf("action mode '%s' in file '%s' is disabled", action.Mode, filename))
+				continue
+			}
+
 			actionFactory, existed := actionFactoryMap[action.Mode]
 
 			if !existed {
@@ -179,6 +213,7 @@ func loadConfig() {
 			}
 
 			pipeline.Action = append(pipeline.Action, actionPlugin)
+			pipeline.ActionConfig = append(pipeline.ActionConfig, action)
 		}
 
 		//create and execute triggers
@@ -228,8 +263,20 @@ func actionHandleFunc(pipelineID string, triggerPlugin *pluginbase.ITriggerPlugi
 			doAction := true
 			parameters := make(map[string]interface{})
 
+			//execute condition
+			if pipeline.Condition != nil && !pipeline.Condition.IsMatch(&parameters) {
+				return
+			}
+
 			//execute filters
-			for _, filterPlugin := range pipeline.Filter {
+			for filterConfigIndex, filterPlugin := range pipeline.Filter {
+
+				filterConfig := pipeline.FilterConfig[filterConfigIndex]
+
+				if len(filterConfig.Condition) > 0 && !pipelinetool.IsMatchCondition(&filterConfig.Condition, &parameters) {
+					continue
+				}
+
 				if doNextPipeline := filterPlugin.DoFilter(messageFromTrigger, &parameters); !doNextPipeline {
 					doAction = false
 					break
@@ -238,7 +285,14 @@ func actionHandleFunc(pipelineID string, triggerPlugin *pluginbase.ITriggerPlugi
 
 			//execute action
 			if doAction {
-				for _, actionPlugin := range pipeline.Action {
+				for actionConfigIndex, actionPlugin := range pipeline.Action {
+
+					actionConfig := pipeline.ActionConfig[actionConfigIndex]
+
+					if len(actionConfig.Condition) > 0 && !pipelinetool.IsMatchCondition(&actionConfig.Condition, &parameters) {
+						continue
+					}
+
 					go actionPlugin.FireAction(messageFromTrigger, &parameters)
 				}
 			}
