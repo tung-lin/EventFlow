@@ -61,8 +61,8 @@ func getField(fieldPath string, jsonContent map[string]*json.RawMessage) (fieldV
 
 		value, existed := objectMap[path]
 
-		if !existed {
-			return ""
+		if value == nil || !existed {
+			return nil
 		}
 
 		//is the last item in array
