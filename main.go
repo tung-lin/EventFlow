@@ -15,10 +15,9 @@ import (
 )
 
 type eventFlow struct {
-	Trigger   []triggerConfig        `yaml:"trigger"`
-	Condition pipelinetool.Condition `yaml:"condition"`
-	Filter    []filterConfig         `yaml:"filter"`
-	Action    []actionConfig         `yaml:"action"`
+	Trigger []triggerConfig `yaml:"trigger"`
+	Filter  []filterConfig  `yaml:"filter"`
+	Action  []actionConfig  `yaml:"action"`
 }
 
 type triggerConfig struct {
@@ -45,7 +44,6 @@ type pipeline struct {
 	PipelineID       string
 	PipelineFileName string
 	Trigger          []pluginbase.ITriggerPlugin
-	Condition        pluginbase.IConditionPlugin
 	Filter           []pluginbase.IFilterPlugin
 	FilterConfig     []filterConfig
 	Action           []pluginbase.IActionPlugin
@@ -56,7 +54,6 @@ var ch chan os.Signal
 var runForever bool
 
 var triggerFactoryMap map[string]pluginbase.ITriggerFactory
-var conditionFactory pluginbase.IConditionFactory
 var actionFactoryMap map[string]pluginbase.IActionFactory
 var filterFactoryMap map[string]pluginbase.IFilterFactory
 
@@ -66,7 +63,7 @@ func init() {
 	loader := pluginImportLoader{}
 	//loader := pluginSharedObjectLoader{}
 
-	triggerFactoryMap, conditionFactory, filterFactoryMap, actionFactoryMap = loader.Load()
+	triggerFactoryMap, filterFactoryMap, actionFactoryMap = loader.Load()
 
 	pipelineMap = make(map[string]*pipeline)
 
@@ -163,11 +160,6 @@ func loadConfig() {
 
 		logtool.Debug("main", "main", fmt.Sprintf("read pipeline config file '%s' (%d trigger(s), %d filter(s), %d action(s))", filename, len(config.Trigger), len(config.Filter), len(config.Action)))
 
-		//create condition
-		if conditionFactory != nil {
-			pipeline.Condition = conditionFactory.CreateCondition(config.Condition)
-		}
-
 		//create filters
 		for _, filter := range config.Filter {
 
@@ -263,17 +255,16 @@ func actionHandleFunc(pipelineID string, triggerPlugin *pluginbase.ITriggerPlugi
 			doAction := true
 			parameters := make(map[string]interface{})
 
-			//execute condition
-			if pipeline.Condition != nil && !pipeline.Condition.IsMatch(&parameters) {
-				return
-			}
-
 			//execute filters
 			for filterConfigIndex, filterPlugin := range pipeline.Filter {
 
 				filterConfig := pipeline.FilterConfig[filterConfigIndex]
 
-				if len(filterConfig.Condition) > 0 && !pipelinetool.IsMatchCondition(&filterConfig.Condition, &parameters) {
+				if match, err := pipelinetool.IsMatchCondition(&filterConfig.Condition, &parameters); len(filterConfig.Condition) > 0 && !match {
+					if err != nil {
+						logtool.Error("filter", filterConfig.Mode, err.Error())
+						break
+					}
 					continue
 				}
 
@@ -289,7 +280,11 @@ func actionHandleFunc(pipelineID string, triggerPlugin *pluginbase.ITriggerPlugi
 
 					actionConfig := pipeline.ActionConfig[actionConfigIndex]
 
-					if len(actionConfig.Condition) > 0 && !pipelinetool.IsMatchCondition(&actionConfig.Condition, &parameters) {
+					if match, err := pipelinetool.IsMatchCondition(&actionConfig.Condition, &parameters); len(actionConfig.Condition) > 0 && !match {
+						if err != nil {
+							logtool.Error("action", actionConfig.Mode, err.Error())
+							break
+						}
 						continue
 					}
 
