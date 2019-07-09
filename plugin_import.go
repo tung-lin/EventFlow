@@ -4,7 +4,6 @@ import (
 	"EventFlow/common/interface/pluginbase"
 	"EventFlow/plugin/action/email"
 	"EventFlow/plugin/action/line"
-	"EventFlow/plugin/condition"
 	"EventFlow/plugin/filter/dbmysql"
 	"EventFlow/plugin/filter/json"
 	"EventFlow/plugin/filter/throttle"
@@ -16,10 +15,7 @@ import (
 type pluginImportLoader struct {
 }
 
-func (loader pluginImportLoader) Load() (triggerFactories map[string]pluginbase.ITriggerFactory, conditionFactory pluginbase.IConditionFactory, filterFactories map[string]pluginbase.IFilterFactory, actionFactories map[string]pluginbase.IActionFactory) {
-
-	//create condition factory
-	conditionFactory = condition.ConditionFactory{}
+func (loader pluginImportLoader) Load() (triggerFactories map[string]pluginbase.ITriggerFactory, filterFactories map[string]pluginbase.IFilterFactory, actionFactories map[string]pluginbase.IActionFactory) {
 
 	//create trigger factories
 	var triggerFactoryMap = make(map[string]pluginbase.ITriggerFactory)
@@ -51,5 +47,5 @@ func (loader pluginImportLoader) Load() (triggerFactories map[string]pluginbase.
 		actionFactoryMap[action.GetIdentifyName()] = action
 	}
 
-	return triggerFactoryMap, conditionFactory, filterFactoryMap, actionFactoryMap
+	return triggerFactoryMap, filterFactoryMap, actionFactoryMap
 }
