@@ -2,6 +2,7 @@ package pipelinetool
 
 import (
 	"fmt"
+	"reflect"
 )
 
 //'or' logic between ConditionGroup
@@ -14,10 +15,13 @@ type Condition []struct {
 
 //ConditionGroup defines condition by key-value pair
 type ConditionGroup struct {
-	Metadata      string      `yaml:"metadata"`
-	Value         interface{} `yaml:"value"`
-	ThresholdType string      `yaml:"thresholdtype"`
+	Metadata   string      `yaml:"metadata"`
+	Value      interface{} `yaml:"value"`
+	Expression string      `yaml:"expression"`
 }
+
+var floatType = reflect.TypeOf(float64(0))
+var stringType = reflect.TypeOf(string(""))
 
 //IsMatchCondition judges status by Condition and ConditionGroup
 func IsMatchCondition(conditions *Condition, parameters *map[string]interface{}) (isMatched bool, err error) {
@@ -27,38 +31,89 @@ func IsMatchCondition(conditions *Condition, parameters *map[string]interface{})
 		matched := true
 
 		for _, conditionGroup := range condition.ConditionGroups {
-			if value, existed := (*parameters)[conditionGroup.Metadata]; existed {
+			if dataValue, existed := (*parameters)[conditionGroup.Metadata]; existed {
 
-				var conditionValue interface{}
+				var configValue = conditionGroup.Value
+				var configValueCasted interface{}
+				var dataValueCasted interface{}
+				var configValueType reflect.Type
+				var dataValueType reflect.Type
+				var v reflect.Value
 
-				switch value.(type) {
-				case float64:
-					v, ok := conditionGroup.Value.(float64)
-					if !ok {
-						return false, fmt.Errorf(fmt.Sprintf("cannot cast %v from %T to float64", conditionGroup.Value, conditionGroup.Value))
-					}
-					conditionValue = v
-				case string:
-					if conditionGroup.ThresholdType != "eq" && conditionGroup.ThresholdType != "neq" {
+				if conditionGroup.Expression == "" {
+					conditionGroup.Expression = "eq"
+				}
+
+				if configValue != nil {
+					if reflect.TypeOf(configValue).Kind() == reflect.String && conditionGroup.Expression != "eq" && conditionGroup.Expression != "neq" {
 						return false, fmt.Errorf("the condition(gt, gte, lt, lte) accepts only integer or float values")
 					}
 
-					v, ok := conditionGroup.Value.(string)
-					if !ok {
-						return false, fmt.Errorf(fmt.Sprintf("cannot cast %v from %T to string", conditionGroup.Value, conditionGroup.Value))
+					v = reflect.ValueOf(configValue)
+					v = reflect.Indirect(v)
+					configValueType = v.Type()
+
+				} else {
+					if conditionGroup.Expression != "eq" && conditionGroup.Expression != "neq" {
+						return false, fmt.Errorf("the condition(gt, gte, lt, lte) accepts only integer or float values")
 					}
-					conditionValue = v
 				}
 
-				if conditionGroup.ThresholdType == "" {
-					conditionGroup.ThresholdType = "eq"
+				if dataValue != nil {
+					dataValueType = reflect.TypeOf(dataValue)
 				}
 
-				switch thresholdType := conditionGroup.ThresholdType; thresholdType {
+				if configValueType != nil && configValueType.ConvertibleTo(floatType) {
+					configValueCasted = v.Convert(floatType).Float()
+
+					if dataValue == nil {
+						return false, fmt.Errorf("cannot compare %v(%v) to nil", configValue, configValueType)
+					}
+
+					v = reflect.ValueOf(dataValue)
+					v = reflect.Indirect(v)
+
+					if !v.Type().ConvertibleTo(floatType) {
+						return false, fmt.Errorf("cannot compare %v(%v) to %v(%v)", configValue, configValueType, v, dataValueType.Kind())
+					}
+
+					dataValueCasted = v.Convert(floatType).Float()
+
+				} else if configValueType == nil || configValueType.ConvertibleTo(stringType) {
+
+					if configValueType != nil {
+						configValueCasted = v.Convert(stringType).String()
+					} else {
+						configValueCasted = nil
+					}
+
+					if dataValue != nil {
+						v = reflect.ValueOf(dataValue)
+						v = reflect.Indirect(v)
+
+						if !v.Type().ConvertibleTo(stringType) {
+							return false, fmt.Errorf("cannot compare %v(%T) to %v(%v)", configValue, configValue, v, dataValueType.Kind())
+						}
+
+						dataValueCasted = v.Convert(stringType).String()
+					} else {
+						dataValueCasted = nil
+					}
+				}
+
+				switch expression := conditionGroup.Expression; expression {
 				case "eq":
-					matched = value == conditionValue
+					matched = configValueCasted == dataValueCasted
 				case "neq":
-					matched = value != conditionValue
+					matched = configValueCasted != dataValueCasted
+				case "gt":
+					matched = dataValueCasted.(float64) > configValueCasted.(float64)
+				case "gte":
+					matched = dataValueCasted.(float64) >= configValueCasted.(float64)
+				case "lt":
+					matched = dataValueCasted.(float64) < configValueCasted.(float64)
+				case "lte":
+					matched = dataValueCasted.(float64) <= configValueCasted.(float64)
 				}
 
 				if !matched {
