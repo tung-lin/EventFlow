@@ -8,6 +8,8 @@ import (
 	"EventFlow/plugin/filter/json"
 	"EventFlow/plugin/filter/throttle"
 	"EventFlow/plugin/trigger/http"
+	"EventFlow/plugin/trigger/httppoll"
+	"EventFlow/plugin/trigger/kafka"
 	"EventFlow/plugin/trigger/swaggerstats"
 	"EventFlow/plugin/trigger/udp"
 )
@@ -21,7 +23,7 @@ func (loader pluginImportLoader) Load() (triggerFactories map[string]pluginbase.
 	var triggerFactoryMap = make(map[string]pluginbase.ITriggerFactory)
 	triggers := []pluginbase.ITriggerFactory{}
 
-	triggers = append(triggers, swaggerstats.SwaggerStatsFactory{}, http.HttpFactory{}, udp.UdpFactory{})
+	triggers = append(triggers, kafka.KafkaFactory{}, http.HttpFactory{}, udp.UdpFactory{}, swaggerstats.SwaggerStatsFactory{}, httppoll.HttpPollFactory{})
 
 	for _, trigger := range triggers {
 		triggerFactoryMap[trigger.GetIdentifyName()] = trigger

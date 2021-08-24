@@ -1,6 +1,7 @@
 trigger: 
   -
     mode: http
+    disable: true
     setting:
       port: 8088
 
@@ -25,7 +26,7 @@ filter:
     setting:
       ip: 192.168.8.142
       user: admin
-      password: 
+      password: 3edc$RFV
       database: isurveillance.authority
       command: "select URI from usercontact where FK_User = '%{providerid}'"
       addmetadata:

@@ -40,10 +40,10 @@ type rateLimit struct {
 	Reset          time.Time
 }
 
-func (filter *LinePlugin) FireAction(messageFromTrigger *string, parameters *map[string]interface{}) {
+func (action *LinePlugin) FireAction(messageFromTrigger *string, parameters *map[string]interface{}) {
 
-	message := parametertool.ReplaceWithParameter(&filter.Setting.Message, parameters)
-	accessTokens := parametertool.ReplaceWithParameter(&filter.Setting.AccessToken, parameters)
+	message := parametertool.ReplaceWithParameter(&action.Setting.Message, parameters)
+	accessTokens := parametertool.ReplaceWithParameter(&action.Setting.AccessToken, parameters)
 
 	values := url.Values{}
 	values.Add("message", message)

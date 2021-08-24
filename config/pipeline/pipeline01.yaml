@@ -1,81 +1,128 @@
 trigger: 
   -
     mode: udp
-    disable: true
+    #disable: true
     setting:
       port: 8088
   -
     mode: http
-    disable: true
+    #disable: true
     setting:
       port: 8088
+  # -
+  #   mode: http_poll
+  #   setting:
+  #     urls:
+  #       - 
+  #         url: "https://ptx.transportdata.tw/MOTC/v2/Basic/Authority?$top=1&$format=JSON"
+  #         #codec: json
+  #     cron: "@every 10s"
+  #     timeout_ms: 100
+  #     codec: json
+  #     auth:
+  #       mode: hmac
+  #       setting:
+  #         type: ptx
+  #         algorithm: hmac-sha1
+  #         appid: FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
+  #         appkey: FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF
 
 filter:
   -
     mode: json
     setting:
-      addmetadata: 
-        throttlekey: "[ID]"
+      addmetadata:
+        id: "[ID]"
+        time: "[Data][Timestamp]"
         level: "[Data][Level]"
-        timestamp: "[Data][Timestamp]"
         step: "[Data][JobStep]"
-        transtype: "[Data][LogType]"
-        datatype: "[Data][DataType]"
-        datatarget: "[Data][Target]"        
-        provider: "[Data][Provider]"
-        authority: "[Data][Authority]"
         operation: "[Data][Operation]"
-        operationresult: "[Data][Status]"
+        status: "[Data][Status]"
+        provider: "[Data][ProviderName]"
+        auth: "[Data][AuthorityName]"
+        authid: "[Data][AuthorityID]"
+        category: "[Data][CategoryName]"
+        subcategory: "[Data][SubCategoryName]"
+        datatype: "[Data][DataTypes]"
+        islivedata: "[Data][IsLiveData]"
+        ispersistence: "[Data][IsPersistence]"
         message: "[Data][Message]"
-        detail: "[Data][ExceptionStackTrace]"
+        exception: "[Data][ExceptionStackTrace]"
   -
     mode: throttle
+    condition:
+      -
+        conditiongroup:
+          -
+            metadata: id
+            expression: eq
+            value: "123"
+          -
+            metadata: authid
+            value: "004"
     setting:
       triggercount: 2
       actioncount: 2
       periodsecond: 10
       key: "%{throttlekey}"
 
+  # -
+  #   mode: mysql
+  #   setting:
+  #     ip: 192.168.99.232
+  #     user: IISIDBA
+  #     password: 4rfv#EDC2wsx!QAZ
+  #     database: MOTCAPI_v3
+  #     command: "select LineToken from BaseAuthority where ID = '%{authid}'"
+  #     addmetadata:
+  #       line_token: "[LineToken]"
+  #     cache:
+  #       cachekey: "%{id}"
+  #       timeoutsecond: 604800
+
 action:
-  - 
-    mode: email
-    setting:
-      address: smtp.gmail.com
-      port: 587
-      username: pplovable@gmail.com
-      password: 
-      from: pplovable@gmail.com
-      staticto: [tl.yu@iisigroup.com]
-      subject: "PTX ETL Notification - %{transtype} - %{datatarget} - %{datatype}"
-      body: " \r\n 時間:%{timestamp}\r\n
-              等級:%{level}\r\n\r\n
-              ==========ETL==========\r\n
-              步驟:%{step}\r\n
-              執行動作:%{operation}\r\n
-              執行動作結果:%{operationresult}\r\n\r\n
-              ==========Data==========\r\n
-              運具:%{transtype}\r\n
-              種類:%{datatarget}\r\n
-              性質:%{datatype}\r\n
-              提供者:%{provider}\r\n
-              業管機關:%{authority}\r\n\r\n
-              ==========Debug==========\r\n
-              訊息:%{message}\r\n
-              詳細訊息:%{detail}\r\n"
+  # - 
+  #   mode: email
+  #   setting:
+  #     address: smtp.gmail.com
+  #     port: 587
+  #     username: pplovable@gmail.com
+  #     password: 
+  #     from: pplovable@gmail.com
+  #     staticto: [tl.yu@iisigroup.com]
+  #     subject: "PTX ETL Notification - %{transtype} - %{datatarget} - %{datatype}"
+  #     body: " \r\n 時間:%{timestamp}\r\n
+  #             等級:%{level}\r\n\r\n
+  #             ==========ETL==========\r\n
+  #             步驟:%{step}\r\n
+  #             執行動作:%{operation}\r\n
+  #             執行動作結果:%{operationresult}\r\n\r\n
+  #             ==========Data==========\r\n
+  #             運具:%{transtype}\r\n
+  #             種類:%{datatarget}\r\n
+  #             性質:%{datatype}\r\n
+  #             提供者:%{provider}\r\n
+  #             業管機關:%{authority}\r\n\r\n
+  #             ==========Debug==========\r\n
+  #             訊息:%{message}\r\n
+  #             詳細訊息:%{detail}\r\n"
   -
     mode: line
     setting:
       accesstoken: 2mJC8j7b1fdb6VnUISau31gsJdQWsjeoJ5mV48tnBoZ  #test
       #accesstoken: hqtY0bXbrDgLh7jNmPCjvrr6EdBvh8hkz0udJLbGFWl   #ptx
-      message: "\r\n 時間:%{timestamp}\r\n
+      message: "\r\n 時間:%{time}\r\n
                 等級:%{level}\r\n\r\n
-                ==========ETL==========\r\n
+                ========PTX資料處理狀態========\r\n
                 步驟:%{step}\r\n
                 執行動作:%{operation}\r\n
-                執行動作結果:%{operationresult}\r\n\r\n
-                ==========Data==========\r\n
-                運具:%{transtype}\r\n
-                種類:%{datatarget}\r\n
-                性質:%{datatype}\r\n
-                提供者:%{provider}\r\n
-                業管機關:%{authority}\r\n\r\n"
+                執行動作結果:%{message}\r\n
+                錯誤訊息:%{exception}\r\n\r\n
+                ============資料類型===========\r\n
+                資料種類:%{datatype}\r\n
+                資料提供者:%{provider}\r\n
+                業管機關:%{auth}\r\n
+                運具類型:%{category}\r\n
+                運具子類型:%{subcategory}\r\n
+                動態資料:%{islivedata}\r\n
+                歷史資料:%{ispersistence}\r\n"

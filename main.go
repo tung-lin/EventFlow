@@ -2,6 +2,7 @@ package main
 
 import (
 	"EventFlow/common/interface/pluginbase"
+	"EventFlow/common/tool/conditiontool"
 	"EventFlow/common/tool/logtool"
 	"EventFlow/common/tool/pipelinetool"
 	"EventFlow/common/tool/stringtool"
@@ -9,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	yaml "gopkg.in/yaml.v2"
@@ -27,17 +29,17 @@ type triggerConfig struct {
 }
 
 type filterConfig struct {
-	Mode      string                 `yaml:"mode"`
-	Disable   bool                   `yaml:"disable"`
-	Setting   interface{}            `yaml:"setting"`
-	Condition pipelinetool.Condition `yaml:"condition"`
+	Mode      string                  `yaml:"mode"`
+	Disable   bool                    `yaml:"disable"`
+	Setting   interface{}             `yaml:"setting"`
+	Condition conditiontool.Condition `yaml:"condition"`
 }
 
 type actionConfig struct {
-	Mode      string                 `yaml:"mode"`
-	Disable   bool                   `yaml:"disable"`
-	Setting   interface{}            `yaml:"setting"`
-	Condition pipelinetool.Condition `yaml:"condition"`
+	Mode      string                  `yaml:"mode"`
+	Disable   bool                    `yaml:"disable"`
+	Setting   interface{}             `yaml:"setting"`
+	Condition conditiontool.Condition `yaml:"condition"`
 }
 
 type pipeline struct {
@@ -50,7 +52,7 @@ type pipeline struct {
 	ActionConfig     []actionConfig
 }
 
-var ch chan os.Signal
+var gracefulStopChannel chan os.Signal
 var runForever bool
 
 var triggerFactoryMap map[string]pluginbase.ITriggerFactory
@@ -79,18 +81,36 @@ func main() {
 	}
 
 	if runForever {
-		ch = make(chan os.Signal)
-		signal.Notify(ch, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+		gracefulStopChannel = make(chan os.Signal)
+		signal.Notify(gracefulStopChannel, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
 		go func() {
-			signal := <-ch
+			signal := <-gracefulStopChannel
+			close(gracefulStopChannel)
+
 			logtool.Debug("main", "main", fmt.Sprintf("caught signal: %+v", signal))
+			logtool.Debug("main", "main", "stop pipelines...")
 
 			for _, pipeline := range pipelineMap {
 				for _, triggerPlugin := range pipeline.Trigger {
 					triggerPlugin.Stop()
 				}
 			}
+
+			logtool.Debug("main", "main", "wait for all pipelines to finish executing...")
+
+			pipelinetool.GlobalPipelineWaitGroup.Wait()
+
+			logtool.Debug("main", "main", "all pipelines stopped!")
+			logtool.Debug("main", "main", "wait for all pipelines to dispose...")
+
+			for _, pipeline := range pipelineMap {
+				for _, triggerPlugin := range pipeline.Trigger {
+					triggerPlugin.CloseChannel()
+				}
+			}
+
+			logtool.Debug("main", "main", "all pipelines disposed!")
 
 			exitFunc()
 		}()
@@ -236,7 +256,7 @@ func loadConfig() {
 
 			pipeline.Trigger = append(pipeline.Trigger, triggerPlugin)
 
-			triggerPlugin.ActionHandleFunc(pipeline.PipelineID, actionHandleFunc)
+			triggerPlugin.ActionHandleFunc(&triggerPlugin, pipeline.PipelineID, actionHandleFunc)
 
 			go triggerPlugin.Start()
 		}
@@ -247,50 +267,72 @@ func loadConfig() {
 
 func actionHandleFunc(pipelineID string, triggerPlugin *pluginbase.ITriggerPlugin, messageFromTrigger *string) {
 
-	go func() {
+	//find pipeline by ID
+	if pipeline, existed := pipelineMap[pipelineID]; existed {
 
-		//find pipeline by ID
-		if pipeline, existed := pipelineMap[pipelineID]; existed {
+		doAction := true
+		parameters := make(map[string]interface{})
 
-			doAction := true
-			parameters := make(map[string]interface{})
+		//execute filters
+		for filterConfigIndex, filterPlugin := range pipeline.Filter {
 
-			//execute filters
-			for filterConfigIndex, filterPlugin := range pipeline.Filter {
+			if !doAction {
+				break
+			}
 
-				filterConfig := pipeline.FilterConfig[filterConfigIndex]
+			filterConfig := pipeline.FilterConfig[filterConfigIndex]
 
-				if match, err := pipelinetool.IsMatchCondition(&filterConfig.Condition, &parameters); len(filterConfig.Condition) > 0 && !match {
+			if match, err := conditiontool.IsMatchCondition(&filterConfig.Condition, &parameters); len(filterConfig.Condition) > 0 && !match {
+				if err != nil {
+					logtool.Error("filter", filterConfig.Mode, err.Error())
+				}
+				continue
+			}
+
+			func() {
+				defer func() {
+					if err := recover(); err != nil {
+						logtool.Fatal("filter", filterConfig.Mode, fmt.Sprintf("unhandle exception occurred: %v", err.(runtime.Error).Error()))
+					}
+				}()
+
+				if doNextPipeline := filterPlugin.DoFilter(messageFromTrigger, &parameters); !doNextPipeline {
+					doAction = false
+				}
+			}()
+		}
+
+		//execute action
+		if doAction {
+			for actionConfigIndex, actionPlugin := range pipeline.Action {
+
+				actionConfig := pipeline.ActionConfig[actionConfigIndex]
+				actionMode := actionConfig.Mode
+
+				if match, err := conditiontool.IsMatchCondition(&actionConfig.Condition, &parameters); len(actionConfig.Condition) > 0 && !match {
 					if err != nil {
-						logtool.Error("filter", filterConfig.Mode, err.Error())
-						break
+						logtool.Error("action", actionMode, err.Error())
 					}
 					continue
 				}
 
-				if doNextPipeline := filterPlugin.DoFilter(messageFromTrigger, &parameters); !doNextPipeline {
-					doAction = false
-					break
-				}
-			}
+				pipelinetool.GlobalPipelineWaitGroup.Add(1)
 
-			//execute action
-			if doAction {
-				for actionConfigIndex, actionPlugin := range pipeline.Action {
+				go func(plugin pluginbase.IActionPlugin) {
 
-					actionConfig := pipeline.ActionConfig[actionConfigIndex]
+					defer func() {
+						pipelinetool.GlobalPipelineWaitGroup.Done()
+					}()
 
-					if match, err := pipelinetool.IsMatchCondition(&actionConfig.Condition, &parameters); len(actionConfig.Condition) > 0 && !match {
-						if err != nil {
-							logtool.Error("action", actionConfig.Mode, err.Error())
-							break
+					defer func() {
+						if err := recover(); err != nil {
+							logtool.Fatal("action", actionMode, fmt.Sprintf("unhandle exception occurred: %v", err.(runtime.Error).Error()))
 						}
-						continue
-					}
+					}()
 
-					go actionPlugin.FireAction(messageFromTrigger, &parameters)
-				}
+					plugin.FireAction(messageFromTrigger, &parameters)
+				}(actionPlugin)
 			}
 		}
-	}()
+	}
 }
