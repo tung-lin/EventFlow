@@ -1,0 +1,8 @@
+trigger: 
+  - 
+    mode: kafka
+    setting:
+      brokers: ["192.168.2.2:27071", "192.168.3.3:27072"]
+      groupid: "test"
+      topic: "test"
+      from_oldest: false
