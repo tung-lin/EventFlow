@@ -24,10 +24,10 @@ filter:
   -
     mode: mysql
     setting:
-      ip: 192.168.8.142
-      user: admin
-      password: 3edc$RFV
-      database: isurveillance.authority
+      ip: 
+      user: 
+      password: 
+      database: 
       command: "select URI from usercontact where FK_User = '%{providerid}'"
       addmetadata:
         emailaddress: "[URI]"
@@ -41,15 +41,15 @@ action:
     setting:
       address: smtp.gmail.com
       port: 587
-      username: pplovable@gmail.com
+      username: 
       password: 
-      from: pplovable@gmail.com
-      staticto: tl.yu@iisigroup.com
+      from: 
+      staticto: 
       dynamicto: "%{emailaddress}"
       subject: "test %{emailsubject}"
       body: "test %{emailbody}"
   -
     mode: line
     setting:
-      accesstoken: 2mJC8j7b1fdb6VnUISau31gsJdQWsjeoJ5mV48tnBoZ
+      accesstoken: 
       message: "test line %{emailbody}"
